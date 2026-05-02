@@ -836,6 +836,24 @@ ipcMain.handle('get-executor-texture-path', async (event, executorId, customPath
       };
     }
     
+    // Ejecutar move.bat automáticamente para mover los assets al rbx-storage
+    console.log('Ejecutando move.bat automáticamente...');
+    const { exec } = require('child_process');
+    const moveBatPath = path.join(RESOURCES_PATH, 'move.bat');
+    
+    if (fs.existsSync(moveBatPath)) {
+      exec(`"${moveBatPath}"`, (error, stdout, stderr) => {
+        if (error) {
+          console.error('Error al ejecutar move.bat:', error);
+        } else {
+          console.log('move.bat ejecutado correctamente');
+          console.log('Salida:', stdout);
+        }
+      });
+    } else {
+      console.warn('move.bat no encontrado en:', moveBatPath);
+    }
+    
     return { 
       valid: true, 
       message: `${executorId} encontrado correctamente`,
@@ -861,6 +879,80 @@ ipcMain.handle('open-donation-link', async () => {
 });
 
 // Función auxiliar para aplicar skybox en una ruta específica
+// Función para copiar assets al rbx-storage (equivalente al move.bat)
+async function applyRbxStorageAssets() {
+  try {
+    // Buscar la carpeta de assets en múltiples ubicaciones
+    const possibleAssetPaths = [
+      // En producción: dentro del app.asar.unpacked
+      path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'assets'),
+      // En producción: userData
+      path.join(app.getPath('userData'), 'resources', 'assets'),
+      // En desarrollo: carpeta local
+      path.join(__dirname, 'resources', 'assets'),
+      // En RESOURCES_PATH actual
+      path.join(RESOURCES_PATH, 'assets'),
+    ];
+
+    let assetsPath = null;
+    for (const p of possibleAssetPaths) {
+      if (fs.existsSync(p)) {
+        assetsPath = p;
+        break;
+      }
+    }
+
+    if (!assetsPath) {
+      log.warn('applyRbxStorageAssets: carpeta assets no encontrada');
+      return { success: false, message: 'Carpeta assets no encontrada' };
+    }
+
+    const rbxStoragePath = path.join(os.homedir(), 'AppData', 'Local', 'Roblox', 'rbx-storage');
+
+    // Leer todos los archivos de assets
+    const assetFiles = fs.readdirSync(assetsPath);
+    if (assetFiles.length === 0) {
+      return { success: false, message: 'No hay assets para copiar' };
+    }
+
+    const { exec } = require('child_process');
+    let copied = 0;
+
+    for (const file of assetFiles) {
+      const src = path.join(assetsPath, file);
+      // El subdirectorio es los primeros 2 caracteres del nombre del archivo
+      const subDir = file.substring(0, 2);
+      const destDir = path.join(rbxStoragePath, subDir);
+      const dest = path.join(destDir, file);
+
+      try {
+        // Crear subdirectorio si no existe
+        await fs.ensureDir(destDir);
+
+        // Quitar protección si existe
+        await new Promise(r => exec(`attrib -R "${dest}"`, () => r()));
+
+        // Copiar archivo
+        await fs.copy(src, dest, { overwrite: true });
+
+        // Proteger archivo
+        await new Promise(r => exec(`attrib +R "${dest}"`, () => r()));
+
+        copied++;
+        log.info(`Asset copiado: ${file} -> ${destDir}`);
+      } catch (err) {
+        log.warn(`Error copiando asset ${file}:`, err.message);
+      }
+    }
+
+    log.info(`applyRbxStorageAssets: ${copied}/${assetFiles.length} assets copiados`);
+    return { success: true, copied };
+  } catch (error) {
+    log.error('Error en applyRbxStorageAssets:', error);
+    return { success: false, message: error.message };
+  }
+}
+
 async function applySkyboxToPath(skyboxPath, texFiles, texturePath) {
   const { exec } = require('child_process');
   const skyPath = path.join(texturePath, 'sky');
@@ -944,6 +1036,22 @@ ipcMain.handle('apply-skybox-by-name', async (event, skyboxName, texturePath) =>
         message: `No se encontraron archivos .tex en ${skyboxName}`
       };
     }
+
+    // =====================================================
+    // PASO 1: Aplicar via rbx-storage (método principal)
+    // Equivalente al move.bat - copia los .tex como hashes
+    // al rbx-storage de Roblox
+    // =====================================================
+    log.info('Aplicando via rbx-storage...');
+    const rbxResult = await rbxStorage.applySkyboxFromTexFiles(skyboxPath);
+    log.info('Resultado rbx-storage:', rbxResult);
+
+    // =====================================================
+    // PASO 2: Copiar assets fijos al rbx-storage
+    // Estos son los archivos del move.bat original
+    // =====================================================
+    log.info('Aplicando assets fijos al rbx-storage...');
+    await applyRbxStorageAssets();
     
     // DETECTAR SI HAY MÚLTIPLES VERSIONES Y APLICAR EN TODAS
     // Extraer el ejecutor de la ruta (Roblox, Fishstrap, Bloxtrap)
@@ -981,6 +1089,9 @@ ipcMain.handle('apply-skybox-by-name', async (event, skyboxName, texturePath) =>
           }
         }
       }
+
+      // Aplicar assets al rbx-storage (equivalente al move.bat)
+      // Ya se hizo arriba, no repetir
       
       return {
         success: true,
@@ -993,6 +1104,10 @@ ipcMain.handle('apply-skybox-by-name', async (event, skyboxName, texturePath) =>
     // Si no se detectaron múltiples versiones, aplicar solo en la ruta dada
     console.log('Aplicando en ruta única...');
     const result = await applySkyboxToPath(skyboxPath, texFiles, texturePath);
+
+    // Aplicar assets al rbx-storage siempre
+    log.info('Aplicando assets al rbx-storage...');
+    await applyRbxStorageAssets();
     
     if (result.success) {
       return {

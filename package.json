@@ -1,6 +1,6 @@
 {
   "name": "yumman-rivals",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "YUMMAN RIVALS - Roblox Texture Manager",
   "main": "main.js",
   "scripts": {
@@ -35,7 +35,8 @@
     "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",
     "fs-extra": "^11.2.0",
-    "jimp": "^0.22.0"
+    "jimp": "^0.22.0",
+    "uuid": "^14.0.0"
   },
   "build": {
     "appId": "com.yumman.rivals",
@@ -47,13 +48,10 @@
     },
     "files": [
       "b_W1nO7XZBZq9/out/**/*",
-      "!b_W1nO7XZBZq9/out/**/*.png",
       "!b_W1nO7XZBZq9/out/**/*.jpg",
       "!b_W1nO7XZBZq9/out/**/*.jpeg",
       "LICENSE.txt",
       "icon.ico",
-      "installer-header.bmp",
-      "installer-sidebar.bmp",
       "main.js",
       "preload.js",
       "skyConverter.js",
@@ -61,6 +59,7 @@
       "atmosphereManager.js",
       "updater.js",
       "resourceDownloader.js",
+      "resources/assets/**/*",
       "!resources/**/*",
       "!resources-encrypted/**/*",
       "!encryptResources.js",
@@ -101,10 +100,6 @@
       "license": "LICENSE.txt",
       "installerIcon": "icon.ico",
       "uninstallerIcon": "icon.ico",
-      "installerHeader": "installer-header.bmp",
-      "installerSidebar": "installer-sidebar.bmp",
-      "uninstallerSidebar": "installer-sidebar.bmp",
-      "installerHeaderIcon": "icon.ico",
       "deleteAppDataOnUninstall": false,
       "displayLanguageSelector": false,
       "multiLanguageInstaller": false,
