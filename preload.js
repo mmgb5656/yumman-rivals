@@ -48,5 +48,15 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getExecutorTexturePath: (executorId, customPath) => ipcRenderer.invoke('get-executor-texture-path', executorId, customPath),
   
   // Abrir enlace de donación
-  openDonationLink: () => ipcRenderer.invoke('open-donation-link')
+  openDonationLink: () => ipcRenderer.invoke('open-donation-link'),
+  
+  // Auto-updates
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  onUpdateStatus: (callback) => ipcRenderer.on('update-status', (event, data) => callback(data)),
+  
+  // Recursos
+  checkResources: () => ipcRenderer.invoke('check-resources'),
+  redownloadResources: () => ipcRenderer.invoke('redownload-resources'),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (event, data) => callback(data))
 });

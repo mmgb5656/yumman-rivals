@@ -30,15 +30,23 @@
     "wait-on": "^7.0.0"
   },
   "dependencies": {
+    "adm-zip": "^0.5.17",
+    "axios": "^1.15.2",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
     "fs-extra": "^11.2.0",
     "jimp": "^0.22.0"
   },
   "build": {
     "appId": "com.yumman.rivals",
     "productName": "YUMMAN RIVALS",
+    "publish": {
+      "provider": "github",
+      "owner": "mmgb5656",
+      "repo": "yumman-rivals"
+    },
     "files": [
       "b_W1nO7XZBZq9/out/**/*",
-      "resources/**/*",
       "LICENSE.txt",
       "icon.ico",
       "main.js",
@@ -46,6 +54,9 @@
       "skyConverter.js",
       "rbxStorageManager.js",
       "atmosphereManager.js",
+      "updater.js",
+      "resourceDownloader.js",
+      "!resources/**/*",
       "!resources-encrypted/**/*",
       "!encryptResources.js",
       "!obfuscate.js",

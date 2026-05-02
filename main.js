@@ -2,27 +2,37 @@ const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electr
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const log = require('electron-log');
 const { convertImageToSkybox, generatePreview } = require('./skyConverter');
 const RbxStorageManager = require('./rbxStorageManager');
 const AtmosphereManager = require('./atmosphereManager');
+const Updater = require('./updater');
+const ResourceDownloader = require('./resourceDownloader');
 
 let mainWindow;
+let updater;
+let downloadWindow;
 const rbxStorage = new RbxStorageManager();
 const atmosphere = new AtmosphereManager();
+const resourceDownloader = new ResourceDownloader();
+
+// Configurar logging
+log.transports.file.level = 'info';
+log.info('App iniciada');
 
 // Rutas de recursos empaquetados
-// En producción, los recursos están en .asar.unpacked
+// En producción, los recursos están en .asar.unpacked o en userData
 const isPackaged = app.isPackaged;
 let RESOURCES_PATH;
 
 if (isPackaged) {
-  // En producción: resources/app.asar.unpacked/resources
-  RESOURCES_PATH = path.join(process.resourcesPath, 'app.asar.unpacked', 'resources');
-  console.log('Modo empaquetado - Ruta de recursos:', RESOURCES_PATH);
+  // En producción: usar userData para recursos descargados
+  RESOURCES_PATH = resourceDownloader.getResourcesPath();
+  log.info('Modo empaquetado - Ruta de recursos:', RESOURCES_PATH);
 } else {
   // En desarrollo: carpeta resources local
   RESOURCES_PATH = path.join(__dirname, 'resources');
-  console.log('Modo desarrollo - Ruta de recursos:', RESOURCES_PATH);
+  log.info('Modo desarrollo - Ruta de recursos:', RESOURCES_PATH);
 }
   
 const SKYBOXES_PATH = path.join(RESOURCES_PATH, 'skyboxes', 'all-skyboxes', 'ALL SKYBOXES');
@@ -102,9 +112,199 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+// Crear ventana de descarga de recursos
+function createDownloadWindow() {
+  downloadWindow = new BrowserWindow({
+    width: 500,
+    height: 300,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    },
+    autoHideMenuBar: true,
+    resizable: false,
+    frame: false,
+    icon: path.join(__dirname, 'icon.ico'),
+    backgroundColor: '#0a0a0f',
+    title: 'Descargando Recursos'
+  });
+
+  // Crear HTML simple para la ventana de descarga
+  const downloadHTML = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          margin: 0;
+          padding: 0;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100vh;
+        }
+        .container {
+          text-align: center;
+          padding: 40px;
+        }
+        h1 {
+          font-size: 24px;
+          margin-bottom: 10px;
+        }
+        .status {
+          font-size: 14px;
+          opacity: 0.9;
+          margin-bottom: 20px;
+        }
+        .progress-bar {
+          width: 100%;
+          height: 8px;
+          background: rgba(255,255,255,0.2);
+          border-radius: 4px;
+          overflow: hidden;
+          margin-top: 20px;
+        }
+        .progress-fill {
+          height: 100%;
+          background: white;
+          width: 0%;
+          transition: width 0.3s ease;
+        }
+        .spinner {
+          border: 3px solid rgba(255,255,255,0.3);
+          border-top: 3px solid white;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          animation: spin 1s linear infinite;
+          margin: 20px auto;
+        }
+        @keyframes spin {
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h1>YUMMAN RIVALS</h1>
+        <div class="spinner"></div>
+        <div class="status" id="status">Preparando descarga...</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress"></div>
+        </div>
+      </div>
+      <script>
+        window.electronAPI.onDownloadProgress((data) => {
+          document.getElementById('status').textContent = data.status;
+          if (data.progress !== null) {
+            document.getElementById('progress').style.width = data.progress + '%';
+          }
+        });
+      </script>
+    </body>
+    </html>
+  `;
+
+  downloadWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(downloadHTML));
+  
+  return downloadWindow;
+}
+
+// Verificar y descargar recursos si es necesario
+async function checkAndDownloadResources() {
+  try {
+    log.info('Verificando recursos...');
+    const hasResources = await resourceDownloader.checkResources();
+    
+    if (!hasResources) {
+      log.info('Recursos no encontrados, iniciando descarga...');
+      
+      // Crear ventana de descarga
+      const dlWindow = createDownloadWindow();
+      
+      // Descargar recursos
+      await resourceDownloader.downloadResources(
+        (progress) => {
+          // Enviar progreso
+          if (dlWindow && !dlWindow.isDestroyed()) {
+            dlWindow.webContents.send('download-progress', {
+              progress,
+              status: null
+            });
+          }
+        },
+        (status) => {
+          // Enviar estado
+          if (dlWindow && !dlWindow.isDestroyed()) {
+            dlWindow.webContents.send('download-progress', {
+              progress: null,
+              status
+            });
+          }
+        }
+      );
+      
+      log.info('Recursos descargados correctamente');
+      
+      // Cerrar ventana de descarga
+      if (dlWindow && !dlWindow.isDestroyed()) {
+        dlWindow.close();
+      }
+      
+      // Actualizar rutas de recursos
+      RESOURCES_PATH = resourceDownloader.getResourcesPath();
+      DEFAULT_PATHS.resources = RESOURCES_PATH;
+      DEFAULT_PATHS.skyboxes = path.join(RESOURCES_PATH, 'skyboxes');
+      DEFAULT_PATHS.textures = path.join(RESOURCES_PATH, 'textures');
+      DEFAULT_PATHS.uiImages = path.join(RESOURCES_PATH, 'ui-images');
+      
+      return true;
+    } else {
+      log.info('Recursos ya están descargados');
+      return true;
+    }
+  } catch (error) {
+    log.error('Error descargando recursos:', error);
+    
+    dialog.showErrorBox(
+      'Error al Descargar Recursos',
+      'No se pudieron descargar los recursos necesarios.\n\n' +
+      'Error: ' + error.message + '\n\n' +
+      'Por favor, verifica tu conexión a internet e intenta de nuevo.'
+    );
+    
+    return false;
+  }
+}
+
+app.whenReady().then(async () => {
+  // Verificar y descargar recursos si es necesario
+  const resourcesReady = await checkAndDownloadResources();
+  
+  if (!resourcesReady) {
+    app.quit();
+    return;
+  }
+  
+  // Crear ventana principal
+  createWindow();
+  
+  // Inicializar auto-updater
+  updater = new Updater(mainWindow);
+  updater.startAutoCheck();
+});
 
 app.on('window-all-closed', () => {
+  // Detener verificación automática
+  if (updater) {
+    updater.stopAutoCheck();
+  }
+  
   if (process.platform !== 'darwin') {
     app.quit();
   }
@@ -782,6 +982,59 @@ ipcMain.handle('apply-atmosphere', async (event, presetName, texturePath) => {
     return result;
   } catch (error) {
     console.error('Error al aplicar atmósfera:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+
+// Handler para verificar actualizaciones manualmente
+ipcMain.handle('check-for-updates', () => {
+  if (updater) {
+    updater.checkForUpdates();
+    return { success: true, message: 'Verificando actualizaciones...' };
+  }
+  return { success: false, message: 'Updater no inicializado' };
+});
+
+// Handler para obtener versión de la app
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+// Handler para verificar si hay recursos descargados
+ipcMain.handle('check-resources', async () => {
+  try {
+    const hasResources = await resourceDownloader.checkResources();
+    return { success: true, hasResources };
+  } catch (error) {
+    return { success: false, hasResources: false, message: error.message };
+  }
+});
+
+// Handler para re-descargar recursos
+ipcMain.handle('redownload-resources', async () => {
+  try {
+    const dlWindow = createDownloadWindow();
+    
+    await resourceDownloader.downloadResources(
+      (progress) => {
+        if (dlWindow && !dlWindow.isDestroyed()) {
+          dlWindow.webContents.send('download-progress', { progress, status: null });
+        }
+      },
+      (status) => {
+        if (dlWindow && !dlWindow.isDestroyed()) {
+          dlWindow.webContents.send('download-progress', { progress: null, status });
+        }
+      }
+    );
+    
+    if (dlWindow && !dlWindow.isDestroyed()) {
+      dlWindow.close();
+    }
+    
+    return { success: true, message: 'Recursos descargados correctamente' };
+  } catch (error) {
     return { success: false, message: error.message };
   }
 });
