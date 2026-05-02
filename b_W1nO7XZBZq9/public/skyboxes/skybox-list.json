@@ -1,0 +1,127 @@
+[
+  {
+    "id": "aurora",
+    "name": "Aurora",
+    "image": "/skyboxes/aurora.png"
+  },
+  {
+    "id": "beautiful",
+    "name": "Beautiful",
+    "image": "/skyboxes/beautiful.png"
+  },
+  {
+    "id": "blue",
+    "name": "Blue",
+    "image": "/skyboxes/blue.png"
+  },
+  {
+    "id": "chill-gray",
+    "name": "Chill gray",
+    "image": "/skyboxes/chill-gray.png"
+  },
+  {
+    "id": "chill-pink",
+    "name": "Chill pink",
+    "image": "/skyboxes/chill-pink.png"
+  },
+  {
+    "id": "chromakey",
+    "name": "ChromaKey",
+    "image": "/skyboxes/chromakey.png"
+  },
+  {
+    "id": "cyan",
+    "name": "Cyan",
+    "image": "/skyboxes/cyan.png"
+  },
+  {
+    "id": "emo",
+    "name": "Emo",
+    "image": "/skyboxes/emo.png"
+  },
+  {
+    "id": "goodnight",
+    "name": "Goodnight",
+    "image": "/skyboxes/goodnight.png"
+  },
+  {
+    "id": "hades",
+    "name": "Hades",
+    "image": "/skyboxes/hades.png"
+  },
+  {
+    "id": "hazy",
+    "name": "Hazy",
+    "image": "/skyboxes/hazy.png"
+  },
+  {
+    "id": "light-blue",
+    "name": "Light Blue",
+    "image": "/skyboxes/light-blue.png"
+  },
+  {
+    "id": "light-pink",
+    "name": "Light pink",
+    "image": "/skyboxes/light-pink.png"
+  },
+  {
+    "id": "moonlight",
+    "name": "Moonlight",
+    "image": "/skyboxes/moonlight.png"
+  },
+  {
+    "id": "neonsky",
+    "name": "NeonSky",
+    "image": "/skyboxes/neonsky.png"
+  },
+  {
+    "id": "neonsky2",
+    "name": "NeonSky2",
+    "image": "/skyboxes/neonsky2.png"
+  },
+  {
+    "id": "night",
+    "name": "Night",
+    "image": "/skyboxes/night.png"
+  },
+  {
+    "id": "orange",
+    "name": "Orange",
+    "image": "/skyboxes/orange.png"
+  },
+  {
+    "id": "overcast",
+    "name": "Overcast",
+    "image": "/skyboxes/overcast.png"
+  },
+  {
+    "id": "pandora",
+    "name": "Pandora",
+    "image": "/skyboxes/pandora.png"
+  },
+  {
+    "id": "pink-sunrise",
+    "name": "Pink Sunrise",
+    "image": "/skyboxes/pink-sunrise.png"
+  },
+  {
+    "id": "red",
+    "name": "Red",
+    "image": "/skyboxes/red.png"
+  },
+  {
+    "id": "space-blue",
+    "name": "Space Blue",
+    "image": "/skyboxes/space-blue.png"
+  },
+  {
+    "id": "spooky",
+    "name": "Spooky",
+    "image": "/skyboxes/spooky.png"
+  },
+  {
+    "id": "universe",
+    "name": "Universe",
+    "image": "/skyboxes/universe.png"
+  }
+]

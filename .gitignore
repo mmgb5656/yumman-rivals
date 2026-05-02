@@ -1,0 +1,118 @@
+# Dependencies
+node_modules/
+package-lock.json
+pnpm-lock.yaml
+
+# Build outputs
+dist/
+out/
+build/
+*.exe
+*.dmg
+*.zip
+*.blockmap
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Resources (PESADOS - NO subir a GitHub)
+resources/skyboxes/
+resources/textures/
+resources/ui-images/
+*.tex
+*.dds
+*.png
+*.jpg
+*.jpeg
+
+# Archivos temporales y de prueba
+*.bat
+diagnostico-*.txt
+archivos-*.txt
+prueba-*.txt
+reporte-*.txt
+comparacion-*.txt
+
+# Carpetas de desarrollo antiguas
+b_T3CMYRoNfAY/
+b_W1nO7XZBZq9/.next/
+b_W1nO7XZBZq9/node_modules/
+b_W1nO7XZBZq9/out/
+
+# Archivos de documentación temporal
+ANALISIS-*.md
+DIAGNOSTICO-*.md
+PROBLEMA-*.md
+REPORTE-*.md
+BUGS_SOLUCIONADOS.md
+CAMBIOS*.md
+CIELO_*.md
+COMO-*.md
+COMO_*.md
+COMPILACION*.md
+CONVERTIR*.md
+DEBUG*.md
+ESTADO*.md
+ESTRUCTURA*.md
+GARANTIA*.md
+GUIA*.md
+INDICE*.md
+INICIO*.md
+INSTRUCCIONES*.md
+INTEGRACION*.md
+INTEGRATION.md
+LEEME*.txt
+LINK*.md
+MEJORAS*.md
+MONETIZATION.md
+NUEVA*.md
+PASOS*.txt
+PASOS*.md
+PROBLEMA*.md
+PRUEBA*.md
+RESUMEN*.md
+SETUP-GITHUB.md
+SOLUCION*.md
+PROMPT_*.md
+VERSION_*.md
+QUICKSTART.md
+SETUP.md
+SIN_ANUNCIOS.md
+START_HERE.md
+ULTIMO_PASO.txt
+
+# Configuración local
+.env
+.env.local
+config.local.js
+
+# Archivos de encriptación y ofuscación (CONFIDENCIAL)
+encryption-key.txt
+encryptResources.js
+resourceDecryptor.js
+obfuscate.js
+obfuscated/
+resources-encrypted/
+
+# Archivos de proceso y desarrollo interno
+PROCESO_COMPLETADO.md
+PROCESO_*.md
+
+# Backups
+*.backup
+*.bak
