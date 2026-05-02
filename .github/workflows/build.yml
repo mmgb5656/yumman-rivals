@@ -1,0 +1,63 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install UI dependencies
+        working-directory: b_W1nO7XZBZq9
+        run: npm ci
+      
+      - name: Build UI
+        run: npm run build:ui
+      
+      - name: Build Electron App
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload Setup Installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: yumman-rivals-setup
+          path: dist/*Setup*.exe
+          if-no-files-found: error
+      
+      - name: Upload Portable Version
+        uses: actions/upload-artifact@v4
+        with:
+          name: yumman-rivals-portable
+          path: dist/*Portable*.exe
+          if-no-files-found: error
+      
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            dist/*Setup*.exe
+            dist/*Portable*.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
