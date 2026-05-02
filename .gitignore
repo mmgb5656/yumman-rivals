@@ -111,6 +111,9 @@ obfuscate.js
 obfuscated/
 resources-encrypted/
 
+# Scripts temporales de desarrollo
+create-installer-images.js
+
 # Archivos de proceso y desarrollo interno
 PROCESO_COMPLETADO.md
 PROCESO_*.md

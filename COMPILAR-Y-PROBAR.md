@@ -21,6 +21,20 @@
 
 ## Pasos para Compilar
 
+### 0. Generar Imágenes del Instalador (Primera vez)
+
+Si es la primera vez que compilas o quieres regenerar las imágenes:
+
+```powershell
+node create-installer-images.js
+```
+
+Esto creará:
+- `installer-header.bmp` (150x57 pixels) - Header del instalador
+- `installer-sidebar.bmp` (164x314 pixels) - Sidebar del instalador
+
+Con diseño moderno y gradiente morado/azul (#667eea → #764ba2)
+
 ### 1. Compilar la Interfaz
 
 ```powershell
@@ -36,9 +50,16 @@ npm run build:win
 ```
 
 Esto creará:
-- `dist/YUMMAN-RIVALS-Setup-1.0.0.exe` - Instalador NSIS
-- `dist/YUMMAN-RIVALS-Portable-1.0.0.exe` - Versión portable
+- `dist/YUMMAN RIVALS-Setup-1.0.0.exe` - Instalador NSIS con diseño personalizado (137 MB)
+- `dist/YUMMAN RIVALS-Portable-1.0.0.exe` - Versión portable (137 MB)
 - `dist/latest.yml` - Archivo de configuración para auto-updates
+
+El instalador incluye:
+- Diseño moderno con gradiente morado/azul
+- Header y sidebar personalizados
+- Interfaz en español
+- Previews de skyboxes incluidos
+- Auto-updates integrado
 
 ## Probar Localmente
 
@@ -192,9 +213,12 @@ C:\Users\[USER]\AppData\Roaming\yumman-rivals\
 
 ### Checklist:
 
+- [ ] Generar imágenes del instalador: `node create-installer-images.js`
+- [ ] Verificar que existen `installer-header.bmp` y `installer-sidebar.bmp`
 - [ ] Compilar interfaz: `npm run build:ui`
 - [ ] Compilar app: `npm run build:win`
 - [ ] Instalar el `.exe` generado
+- [ ] Verificar diseño del instalador (gradiente morado/azul, texto visible)
 - [ ] Verificar que descarga recursos automáticamente
 - [ ] Verificar que la app funciona correctamente
 - [ ] Crear release en GitHub con tag v1.0.0

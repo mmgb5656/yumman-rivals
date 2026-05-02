@@ -41,25 +41,66 @@ class ResourceDownloader {
     return new Promise((resolve, reject) => {
       onStatus('Conectando al servidor...');
       
-      const file = fs.createWriteStream(this.tempPath);
-
-      https.get(this.resourcesUrl, (response) => {
-        // Manejar redirecciones
-        if (response.statusCode === 302 || response.statusCode === 301) {
-          https.get(response.headers.location, (redirectResponse) => {
-            this.handleDownload(redirectResponse, file, onProgress, onStatus, resolve, reject);
-          }).on('error', reject);
-        } else {
-          this.handleDownload(response, file, onProgress, onStatus, resolve, reject);
+      // Limpiar archivo temporal si existe
+      if (fs.existsSync(this.tempPath)) {
+        try {
+          fs.unlinkSync(this.tempPath);
+        } catch (e) {
+          log.warn('No se pudo eliminar archivo temporal anterior:', e);
         }
-      }).on('error', (error) => {
-        fs.unlinkSync(this.tempPath);
-        reject(error);
-      });
+      }
+      
+      const file = fs.createWriteStream(this.tempPath);
+      let redirectCount = 0;
+      const maxRedirects = 5;
+
+      const makeRequest = (url) => {
+        https.get(url, (response) => {
+          // Manejar redirecciones
+          if (response.statusCode === 302 || response.statusCode === 301) {
+            redirectCount++;
+            if (redirectCount > maxRedirects) {
+              file.close();
+              fs.unlinkSync(this.tempPath);
+              reject(new Error('Demasiadas redirecciones'));
+              return;
+            }
+            
+            log.info(`Redirigiendo a: ${response.headers.location}`);
+            onStatus(`Redirigiendo... (${redirectCount}/${maxRedirects})`);
+            makeRequest(response.headers.location);
+          } else if (response.statusCode === 200) {
+            this.handleDownload(response, file, onProgress, onStatus, resolve, reject);
+          } else {
+            file.close();
+            fs.unlinkSync(this.tempPath);
+            reject(new Error(`Error HTTP ${response.statusCode}: ${response.statusMessage}`));
+          }
+        }).on('error', (error) => {
+          log.error('Error en petición HTTP:', error);
+          file.close();
+          try {
+            fs.unlinkSync(this.tempPath);
+          } catch (e) {
+            // Ignorar error de limpieza
+          }
+          reject(error);
+        });
+      };
+
+      makeRequest(this.resourcesUrl);
     });
   }
 
   handleDownload(response, file, onProgress, onStatus, resolve, reject) {
+    // Verificar código de respuesta
+    if (response.statusCode !== 200) {
+      file.close();
+      fs.unlinkSync(this.tempPath);
+      reject(new Error(`Error HTTP: ${response.statusCode}`));
+      return;
+    }
+
     const totalSize = parseInt(response.headers['content-length'], 10);
     let downloadedSize = 0;
 
@@ -77,25 +118,61 @@ class ResourceDownloader {
 
     response.pipe(file);
 
-    file.on('finish', async () => {
-      file.close();
-      
-      try {
-        onStatus('Extrayendo archivos...');
-        await this.extractZip(onStatus);
+    file.on('finish', () => {
+      file.close(async (err) => {
+        if (err) {
+          reject(err);
+          return;
+        }
         
-        onStatus('Limpiando archivos temporales...');
-        await fs.unlink(this.tempPath);
-        
-        onStatus('¡Recursos instalados correctamente!');
-        resolve();
-      } catch (error) {
-        reject(error);
-      }
+        try {
+          // Verificar que el archivo se descargó completamente
+          const stats = await fs.stat(this.tempPath);
+          log.info(`Archivo descargado: ${stats.size} bytes`);
+          
+          if (stats.size < 1000000) { // Menos de 1 MB es sospechoso
+            throw new Error('Archivo descargado incompleto o corrupto');
+          }
+          
+          onStatus('Extrayendo archivos...');
+          await this.extractZip(onStatus);
+          
+          onStatus('Limpiando archivos temporales...');
+          await fs.unlink(this.tempPath);
+          
+          onStatus('¡Recursos instalados correctamente!');
+          resolve();
+        } catch (error) {
+          log.error('Error procesando descarga:', error);
+          // Limpiar archivo temporal si existe
+          try {
+            await fs.unlink(this.tempPath);
+          } catch (e) {
+            // Ignorar error de limpieza
+          }
+          reject(error);
+        }
+      });
     });
 
     file.on('error', (error) => {
-      fs.unlinkSync(this.tempPath);
+      log.error('Error escribiendo archivo:', error);
+      try {
+        fs.unlinkSync(this.tempPath);
+      } catch (e) {
+        // Ignorar error de limpieza
+      }
+      reject(error);
+    });
+
+    response.on('error', (error) => {
+      log.error('Error en respuesta HTTP:', error);
+      file.close();
+      try {
+        fs.unlinkSync(this.tempPath);
+      } catch (e) {
+        // Ignorar error de limpieza
+      }
       reject(error);
     });
   }
@@ -103,16 +180,57 @@ class ResourceDownloader {
   // Extraer ZIP
   async extractZip(onStatus) {
     try {
+      onStatus('Verificando archivo descargado...');
+      
+      // Verificar que el archivo existe
+      if (!fs.existsSync(this.tempPath)) {
+        throw new Error('Archivo ZIP no encontrado');
+      }
+      
+      // Verificar tamaño del archivo
+      const stats = await fs.stat(this.tempPath);
+      log.info(`Tamaño del archivo ZIP: ${this.formatBytes(stats.size)}`);
+      
+      if (stats.size < 1000000) { // Menos de 1 MB
+        throw new Error(`Archivo ZIP demasiado pequeño: ${this.formatBytes(stats.size)}`);
+      }
+      
+      onStatus('Leyendo archivo ZIP...');
+      
+      // Intentar leer el ZIP
+      let zip;
+      try {
+        zip = new AdmZip(this.tempPath);
+      } catch (error) {
+        log.error('Error leyendo ZIP:', error);
+        throw new Error('Archivo ZIP corrupto o inválido. Intenta descargar de nuevo.');
+      }
+      
       onStatus('Extrayendo archivos...');
       
-      const zip = new AdmZip(this.tempPath);
+      // Obtener entradas del ZIP
       const zipEntries = zip.getEntries();
+      log.info(`Archivos en ZIP: ${zipEntries.length}`);
+      
+      if (zipEntries.length === 0) {
+        throw new Error('Archivo ZIP vacío');
+      }
       
       // Asegurar que existe el directorio de destino
       await fs.ensureDir(this.resourcesPath);
       
       // Extraer todos los archivos
       zip.extractAllTo(this.resourcesPath, true);
+      
+      onStatus('Verificando extracción...');
+      
+      // Verificar que se extrajeron los recursos
+      const skyboxesPath = path.join(this.resourcesPath, 'skyboxes');
+      const texturesPath = path.join(this.resourcesPath, 'textures');
+      
+      if (!fs.existsSync(skyboxesPath) || !fs.existsSync(texturesPath)) {
+        throw new Error('Recursos no se extrajeron correctamente');
+      }
       
       onStatus('Archivos extraídos correctamente');
       

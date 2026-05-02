@@ -47,8 +47,13 @@
     },
     "files": [
       "b_W1nO7XZBZq9/out/**/*",
+      "!b_W1nO7XZBZq9/out/**/*.png",
+      "!b_W1nO7XZBZq9/out/**/*.jpg",
+      "!b_W1nO7XZBZq9/out/**/*.jpeg",
       "LICENSE.txt",
       "icon.ico",
+      "installer-header.bmp",
+      "installer-sidebar.bmp",
       "main.js",
       "preload.js",
       "skyConverter.js",
@@ -95,15 +100,25 @@
       "shortcutName": "YUMMAN RIVALS",
       "license": "LICENSE.txt",
       "installerIcon": "icon.ico",
-      "uninstallerIcon": "icon.ico"
+      "uninstallerIcon": "icon.ico",
+      "installerHeader": "installer-header.bmp",
+      "installerSidebar": "installer-sidebar.bmp",
+      "uninstallerSidebar": "installer-sidebar.bmp",
+      "installerHeaderIcon": "icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "displayLanguageSelector": false,
+      "multiLanguageInstaller": false,
+      "language": "1034",
+      "warningsAsErrors": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "runAfterFinish": true,
+      "menuCategory": true
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
     },
     "compression": "maximum",
-    "asar": true,
-    "asarUnpack": [
-      "resources/**/*"
-    ]
+    "asar": true
   }
 }

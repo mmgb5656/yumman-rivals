@@ -219,14 +219,54 @@ function createDownloadWindow() {
 async function checkAndDownloadResources() {
   try {
     log.info('Verificando recursos...');
+    
+    // PRIMERO: Intentar usar recursos locales (carpeta resources/)
+    const localResourcesPath = path.join(__dirname, 'resources');
+    const localSkyboxes = path.join(localResourcesPath, 'skyboxes');
+    const localTextures = path.join(localResourcesPath, 'textures');
+    
+    if (fs.existsSync(localSkyboxes) && fs.existsSync(localTextures)) {
+      log.info('✓ Usando recursos locales de la carpeta resources/');
+      // Actualizar rutas para usar recursos locales
+      RESOURCES_PATH = localResourcesPath;
+      DEFAULT_PATHS.resources = RESOURCES_PATH;
+      DEFAULT_PATHS.skyboxes = path.join(RESOURCES_PATH, 'skyboxes', 'all-skyboxes', 'ALL SKYBOXES');
+      DEFAULT_PATHS.textures = path.join(RESOURCES_PATH, 'textures', 'ruptic-dark', 'Ruptic Dark');
+      DEFAULT_PATHS.uiImages = path.join(RESOURCES_PATH, 'ui-images');
+      return true;
+    }
+    
+    log.info('Recursos locales no encontrados, verificando recursos descargados...');
+    
+    // SEGUNDO: Si no hay recursos locales, verificar recursos descargados
     const hasResources = await resourceDownloader.checkResources();
     
-    if (!hasResources) {
-      log.info('Recursos no encontrados, iniciando descarga...');
-      
-      // Crear ventana de descarga
-      const dlWindow = createDownloadWindow();
-      
+    if (hasResources) {
+      log.info('✓ Usando recursos descargados previamente');
+      return true;
+    }
+    
+    // TERCERO: Si no hay recursos, descargar desde GitHub (SOLO EN PRODUCCIÓN)
+    if (!app.isPackaged) {
+      log.warn('Modo desarrollo: No hay recursos locales ni descargados');
+      log.warn('Continuando sin recursos (algunas funciones no estarán disponibles)');
+      return true; // Continuar de todos modos en desarrollo
+    }
+    
+    log.info('Recursos no encontrados, iniciando descarga desde GitHub...');
+    
+    // Crear ventana de descarga
+    const dlWindow = createDownloadWindow();
+    
+    // Timeout de 30 segundos para la conexión inicial
+    const downloadTimeout = setTimeout(() => {
+      log.error('Timeout: La descarga tardó demasiado');
+      if (dlWindow && !dlWindow.isDestroyed()) {
+        dlWindow.close();
+      }
+    }, 30000);
+    
+    try {
       // Descargar recursos
       await resourceDownloader.downloadResources(
         (progress) => {
@@ -249,6 +289,7 @@ async function checkAndDownloadResources() {
         }
       );
       
+      clearTimeout(downloadTimeout);
       log.info('Recursos descargados correctamente');
       
       // Cerrar ventana de descarga
@@ -264,21 +305,52 @@ async function checkAndDownloadResources() {
       DEFAULT_PATHS.uiImages = path.join(RESOURCES_PATH, 'ui-images');
       
       return true;
-    } else {
-      log.info('Recursos ya están descargados');
-      return true;
+    } catch (downloadError) {
+      clearTimeout(downloadTimeout);
+      throw downloadError;
     }
   } catch (error) {
     log.error('Error descargando recursos:', error);
     
-    dialog.showErrorBox(
-      'Error al Descargar Recursos',
-      'No se pudieron descargar los recursos necesarios.\n\n' +
-      'Error: ' + error.message + '\n\n' +
-      'Por favor, verifica tu conexión a internet e intenta de nuevo.'
-    );
+    // Cerrar ventana de descarga si existe
+    if (dlWindow && !dlWindow.isDestroyed()) {
+      dlWindow.close();
+    }
     
-    return false;
+    // Mostrar diálogo con opciones
+    const result = await dialog.showMessageBox({
+      type: 'error',
+      title: 'Error al Descargar Recursos',
+      message: 'No se pudieron descargar los recursos necesarios',
+      detail: `Error: ${error.message}\n\nLos recursos (skyboxes y texturas) son necesarios para usar la aplicación.\n\n¿Qué deseas hacer?`,
+      buttons: ['Reintentar', 'Continuar sin Recursos', 'Salir'],
+      defaultId: 0,
+      cancelId: 2
+    });
+    
+    if (result.response === 0) {
+      // Reintentar
+      log.info('Usuario eligió reintentar descarga');
+      return await checkAndDownloadResources();
+    } else if (result.response === 1) {
+      // Continuar sin recursos (modo desarrollo)
+      log.warn('Usuario eligió continuar sin recursos');
+      dialog.showMessageBox({
+        type: 'warning',
+        title: 'Modo Sin Recursos',
+        message: 'La aplicación continuará sin recursos',
+        detail: 'Algunas funciones no estarán disponibles:\n\n' +
+                '- No se podrán aplicar skyboxes\n' +
+                '- No se podrán aplicar texturas Ruptic Dark\n' +
+                '- Las previews no estarán disponibles\n\n' +
+                'Puedes descargar los recursos manualmente desde:\n' +
+                'https://github.com/mmgb5656/yumman-rivals/releases'
+      });
+      return true; // Continuar de todos modos
+    } else {
+      // Salir
+      return false;
+    }
   }
 }
 
