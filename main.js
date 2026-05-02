@@ -864,19 +864,17 @@ ipcMain.handle('open-donation-link', async () => {
 // Función para copiar assets al rbx-storage (equivalente al move.bat)
 async function applyRbxStorageAssets() {
   try {
-    console.log('=== EJECUTANDO MOVE-SILENT.BAT ===');
-    log.info('=== EJECUTANDO MOVE-SILENT.BAT ===');
+    console.log('=== EJECUTANDO MOVE.BAT (SKYFIX) ===');
+    log.info('=== EJECUTANDO MOVE.BAT (SKYFIX) ===');
     
     const { exec } = require('child_process');
-    const { promisify } = require('util');
-    const execAsync = promisify(exec);
     
     // Buscar el bat en múltiples ubicaciones
     const possibleBatPaths = [
-      path.join(app.getPath('userData'), 'resources', 'move-silent.bat'),
-      path.join(RESOURCES_PATH, 'move-silent.bat'),
-      path.join(__dirname, 'resources', 'move-silent.bat'),
-      path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'move-silent.bat'),
+      path.join(app.getPath('userData'), 'resources', 'move.bat'),
+      path.join(RESOURCES_PATH, 'move.bat'),
+      path.join(__dirname, 'resources', 'move.bat'),
+      path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'move.bat'),
     ];
 
     let batPath = null;
@@ -891,36 +889,25 @@ async function applyRbxStorageAssets() {
     }
 
     if (!batPath) {
-      console.error('❌ move-silent.bat NO ENCONTRADO');
-      log.warn('move-silent.bat no encontrado');
-      return { success: false, message: 'move-silent.bat no encontrado' };
+      console.error('❌ move.bat NO ENCONTRADO');
+      log.warn('move.bat no encontrado');
+      return { success: false, message: 'move.bat no encontrado' };
     }
 
-    // Ejecutar el bat desde su directorio
-    console.log('Ejecutando bat...');
-    const batDir = path.dirname(batPath);
-    const { stdout, stderr } = await execAsync(`"${batPath}"`, { 
-      shell: 'cmd.exe',
-      windowsHide: true,
-      cwd: batDir
+    // Ejecutar el bat CON VENTANA VISIBLE (sin windowsHide)
+    console.log('Ejecutando bat con ventana visible...');
+    exec(`start cmd /c "${batPath}"`, { 
+      shell: 'cmd.exe'
     });
     
-    console.log('✓ move-silent.bat ejecutado correctamente');
-    log.info('✓ move-silent.bat ejecutado correctamente');
-    if (stdout) {
-      console.log('stdout:', stdout);
-      log.info('stdout:', stdout);
-    }
-    if (stderr) {
-      console.warn('stderr:', stderr);
-      log.warn('stderr:', stderr);
-    }
+    console.log('✓ move.bat ejecutado (ventana abierta)');
+    log.info('✓ move.bat ejecutado (ventana abierta)');
     
-    return { success: true, message: 'Assets copiados correctamente' };
+    return { success: true, message: 'Skyfix aplicado - presiona cualquier tecla en la ventana' };
     
   } catch (error) {
-    console.error('❌ Error ejecutando move-silent.bat:', error);
-    log.error('Error ejecutando move-silent.bat:', error);
+    console.error('❌ Error ejecutando move.bat:', error);
+    log.error('Error ejecutando move.bat:', error);
     return { success: false, message: error.message };
   }
 }
