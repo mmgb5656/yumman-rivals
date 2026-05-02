@@ -924,9 +924,6 @@ async function applyRbxStorageAssets() {
     return { success: false, message: error.message };
   }
 }
-    return { success: false, message: error.message };
-  }
-}
 
 async function applySkyboxToPath(skyboxPath, texFiles, texturePath) {
   const { exec } = require('child_process');
