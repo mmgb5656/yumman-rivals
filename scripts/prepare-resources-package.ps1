@@ -46,11 +46,11 @@ if (Test-Path "resources/assets") {
     Write-Host "  ADVERTENCIA: No se encontró resources/assets" -ForegroundColor Red
 }
 
-Write-Host "[6/7] Copiando move.bat (skyfix)..." -ForegroundColor Yellow
-if (Test-Path "resources/move.bat") {
-    Copy-Item "resources/move.bat" "$tempDir/resources/"
+Write-Host "[6/7] Copiando move-silent.bat (skyfix silencioso)..." -ForegroundColor Yellow
+if (Test-Path "resources/move-silent.bat") {
+    Copy-Item "resources/move-silent.bat" "$tempDir/resources/"
 } else {
-    Write-Host "  ADVERTENCIA: No se encontró resources/move.bat" -ForegroundColor Red
+    Write-Host "  ADVERTENCIA: No se encontró resources/move-silent.bat" -ForegroundColor Red
 }
 
 # Crear README para el paquete

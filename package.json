@@ -108,7 +108,8 @@
       "perMachine": false,
       "allowElevation": true,
       "runAfterFinish": true,
-      "menuCategory": true
+      "menuCategory": true,
+      "include": "installer-script.nsh"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
