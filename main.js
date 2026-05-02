@@ -836,24 +836,6 @@ ipcMain.handle('get-executor-texture-path', async (event, executorId, customPath
       };
     }
     
-    // Ejecutar move.bat automáticamente para mover los assets al rbx-storage
-    console.log('Ejecutando move.bat automáticamente...');
-    const { exec } = require('child_process');
-    const moveBatPath = path.join(RESOURCES_PATH, 'move.bat');
-    
-    if (fs.existsSync(moveBatPath)) {
-      exec(`"${moveBatPath}"`, (error, stdout, stderr) => {
-        if (error) {
-          console.error('Error al ejecutar move.bat:', error);
-        } else {
-          console.log('move.bat ejecutado correctamente');
-          console.log('Salida:', stdout);
-        }
-      });
-    } else {
-      console.warn('move.bat no encontrado en:', moveBatPath);
-    }
-    
     return { 
       valid: true, 
       message: `${executorId} encontrado correctamente`,
@@ -882,73 +864,66 @@ ipcMain.handle('open-donation-link', async () => {
 // Función para copiar assets al rbx-storage (equivalente al move.bat)
 async function applyRbxStorageAssets() {
   try {
-    // Buscar la carpeta de assets en múltiples ubicaciones
-    const possibleAssetPaths = [
-      // En producción: dentro del app.asar.unpacked
-      path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'assets'),
-      // En producción: userData
-      path.join(app.getPath('userData'), 'resources', 'assets'),
-      // En desarrollo: carpeta local
-      path.join(__dirname, 'resources', 'assets'),
-      // En RESOURCES_PATH actual
-      path.join(RESOURCES_PATH, 'assets'),
+    console.log('=== EJECUTANDO MOVE-SILENT.BAT ===');
+    log.info('=== EJECUTANDO MOVE-SILENT.BAT ===');
+    
+    const { exec } = require('child_process');
+    const { promisify } = require('util');
+    const execAsync = promisify(exec);
+    
+    // Buscar el bat en múltiples ubicaciones
+    const possibleBatPaths = [
+      path.join(app.getPath('userData'), 'resources', 'move-silent.bat'),
+      path.join(RESOURCES_PATH, 'move-silent.bat'),
+      path.join(__dirname, 'resources', 'move-silent.bat'),
+      path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'move-silent.bat'),
     ];
 
-    let assetsPath = null;
-    for (const p of possibleAssetPaths) {
+    let batPath = null;
+    for (const p of possibleBatPaths) {
+      console.log('Verificando bat en:', p, '- Existe:', fs.existsSync(p));
       if (fs.existsSync(p)) {
-        assetsPath = p;
+        batPath = p;
+        console.log('✓ Bat encontrado en:', batPath);
+        log.info('✓ Bat encontrado en:', batPath);
         break;
       }
     }
 
-    if (!assetsPath) {
-      log.warn('applyRbxStorageAssets: carpeta assets no encontrada');
-      return { success: false, message: 'Carpeta assets no encontrada' };
+    if (!batPath) {
+      console.error('❌ move-silent.bat NO ENCONTRADO');
+      log.warn('move-silent.bat no encontrado');
+      return { success: false, message: 'move-silent.bat no encontrado' };
     }
 
-    const rbxStoragePath = path.join(os.homedir(), 'AppData', 'Local', 'Roblox', 'rbx-storage');
-
-    // Leer todos los archivos de assets
-    const assetFiles = fs.readdirSync(assetsPath);
-    if (assetFiles.length === 0) {
-      return { success: false, message: 'No hay assets para copiar' };
+    // Ejecutar el bat desde su directorio
+    console.log('Ejecutando bat...');
+    const batDir = path.dirname(batPath);
+    const { stdout, stderr } = await execAsync(`"${batPath}"`, { 
+      shell: 'cmd.exe',
+      windowsHide: true,
+      cwd: batDir
+    });
+    
+    console.log('✓ move-silent.bat ejecutado correctamente');
+    log.info('✓ move-silent.bat ejecutado correctamente');
+    if (stdout) {
+      console.log('stdout:', stdout);
+      log.info('stdout:', stdout);
     }
-
-    const { exec } = require('child_process');
-    let copied = 0;
-
-    for (const file of assetFiles) {
-      const src = path.join(assetsPath, file);
-      // El subdirectorio es los primeros 2 caracteres del nombre del archivo
-      const subDir = file.substring(0, 2);
-      const destDir = path.join(rbxStoragePath, subDir);
-      const dest = path.join(destDir, file);
-
-      try {
-        // Crear subdirectorio si no existe
-        await fs.ensureDir(destDir);
-
-        // Quitar protección si existe
-        await new Promise(r => exec(`attrib -R "${dest}"`, () => r()));
-
-        // Copiar archivo
-        await fs.copy(src, dest, { overwrite: true });
-
-        // Proteger archivo
-        await new Promise(r => exec(`attrib +R "${dest}"`, () => r()));
-
-        copied++;
-        log.info(`Asset copiado: ${file} -> ${destDir}`);
-      } catch (err) {
-        log.warn(`Error copiando asset ${file}:`, err.message);
-      }
+    if (stderr) {
+      console.warn('stderr:', stderr);
+      log.warn('stderr:', stderr);
     }
-
-    log.info(`applyRbxStorageAssets: ${copied}/${assetFiles.length} assets copiados`);
-    return { success: true, copied };
+    
+    return { success: true, message: 'Assets copiados correctamente' };
+    
   } catch (error) {
-    log.error('Error en applyRbxStorageAssets:', error);
+    console.error('❌ Error ejecutando move-silent.bat:', error);
+    log.error('Error ejecutando move-silent.bat:', error);
+    return { success: false, message: error.message };
+  }
+}
     return { success: false, message: error.message };
   }
 }

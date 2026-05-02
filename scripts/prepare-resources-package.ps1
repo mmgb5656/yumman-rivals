@@ -39,6 +39,20 @@ if (Test-Path "resources/ui-images") {
     Copy-Item -Recurse "resources/ui-images" "$tempDir/resources/"
 }
 
+Write-Host "[5/7] Copiando assets del cielo..." -ForegroundColor Yellow
+if (Test-Path "resources/assets") {
+    Copy-Item -Recurse "resources/assets" "$tempDir/resources/"
+} else {
+    Write-Host "  ADVERTENCIA: No se encontró resources/assets" -ForegroundColor Red
+}
+
+Write-Host "[6/7] Copiando move-silent.bat..." -ForegroundColor Yellow
+if (Test-Path "resources/move-silent.bat") {
+    Copy-Item "resources/move-silent.bat" "$tempDir/resources/"
+} else {
+    Write-Host "  ADVERTENCIA: No se encontró resources/move-silent.bat" -ForegroundColor Red
+}
+
 # Crear README para el paquete
 $readmeContent = @"
 # YUMMAN RIVALS - Resources Package v$version
@@ -87,7 +101,7 @@ YUMMAN RIVALS v$version
 
 Set-Content -Path "$tempDir/README.txt" -Value $readmeContent
 
-Write-Host "[5/5] Creando archivo ZIP..." -ForegroundColor Yellow
+Write-Host "[7/7] Creando archivo ZIP..." -ForegroundColor Yellow
 if (Test-Path $outputFile) {
     Remove-Item $outputFile
 }

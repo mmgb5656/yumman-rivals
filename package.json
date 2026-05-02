@@ -60,6 +60,7 @@
       "updater.js",
       "resourceDownloader.js",
       "resources/assets/**/*",
+      "resources/move-silent.bat",
       "!resources/**/*",
       "!resources-encrypted/**/*",
       "!encryptResources.js",
@@ -68,7 +69,6 @@
       "!encryption-key.txt",
       "!resourceDecryptor.js",
       "!**/*.md",
-      "!**/*.bat",
       "!*.zip",
       "!b_T3CMYRoNfAY/**/*"
     ],
@@ -114,6 +114,10 @@
       "artifactName": "${productName}-Portable-${version}.${ext}"
     },
     "compression": "maximum",
-    "asar": true
+    "asar": true,
+    "asarUnpack": [
+      "resources/assets/**/*",
+      "resources/move-silent.bat"
+    ]
   }
 }
