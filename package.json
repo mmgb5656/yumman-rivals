@@ -1,0 +1,124 @@
+{
+  "name": "yumman-rivals",
+  "version": "1.0.1",
+  "description": "YUMMAN RIVALS - Roblox Texture Manager",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev:electron": "cross-env NODE_ENV=development electron .",
+    "build:ui": "cd ui && npm run build",
+    "build": "npm run build:ui && electron-builder",
+    "build:win": "npm run build:ui && electron-builder --win --x64",
+    "build:portable": "npm run build:ui && electron-builder --win portable"
+  },
+  "keywords": [
+    "roblox",
+    "textures",
+    "electron",
+    "yumman",
+    "rivals"
+  ],
+  "author": "YUMMAN",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.0.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.0.0",
+    "javascript-obfuscator": "^4.2.2",
+    "wait-on": "^7.0.0"
+  },
+  "dependencies": {
+    "adm-zip": "^0.5.17",
+    "axios": "^1.15.2",
+    "electron-log": "^5.4.3",
+    "electron-updater": "^6.8.3",
+    "fs-extra": "^11.2.0",
+    "jimp": "^0.22.0",
+    "uuid": "^14.0.0"
+  },
+  "build": {
+    "appId": "com.yumman.rivals",
+    "productName": "YUMMAN RIVALS",
+    "publish": {
+      "provider": "github",
+      "owner": "mmgb5656",
+      "repo": "yumman-rivals"
+    },
+    "files": [
+      "ui/out/**/*",
+      "!ui/out/**/*.jpg",
+      "!ui/out/**/*.jpeg",
+      "LICENSE.txt",
+      "icon.ico",
+      "src/main.js",
+      "src/preload.js",
+      "src/skyConverter.js",
+      "src/rbxStorageManager.js",
+      "src/atmosphereManager.js",
+      "src/updater.js",
+      "src/resourceDownloader.js",
+      "resources/assets/**/*",
+      "resources/move-silent.bat",
+      "!resources/skyboxes/**/*",
+      "!resources/textures/**/*",
+      "!resources/ui-images/**/*",
+      "!**/*.md",
+      "!*.zip"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "icon.ico",
+      "requestedExecutionLevel": "requireAdministrator",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
+      "extraResources": [
+        {
+          "from": "resources/",
+          "to": "resources/"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "YUMMAN RIVALS",
+      "license": "LICENSE.txt",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "displayLanguageSelector": false,
+      "multiLanguageInstaller": false,
+      "language": "1034",
+      "warningsAsErrors": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "runAfterFinish": true,
+      "menuCategory": true,
+      "include": "build/installer-script.nsh"
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
+    },
+    "compression": "maximum",
+    "asar": true,
+    "asarUnpack": [
+      "resources/assets/**/*",
+      "resources/move-silent.bat"
+    ]
+  }
+}
