@@ -15,20 +15,17 @@ type Tab = "inicio" | "sky" | "textures" | "fonts" | "potato" | "flags" | "guia"
 interface FontEntry { name: string; file: string }
 
 const LOW_LATENCY_FLAGS: Record<string, string> = {
-  "FLogNetwork": "7",
-  "DFIntConnectionMTUSize": "1400",
-  "DFIntRakNetResendBufferArrayLength": "128",
-  "DFIntRakNetResendTimeoutMS": "300",
-  "DFIntNetworkPrediction": "1",
-  "DFIntNetworkLatencyTolerance": "1",
-  "FFlagDebugDisableTelemetryPoint": "True",
-  "FFlagDebugDisableTelemetryV2Stat": "True",
-  "FFlagDebugDisableTelemetryV2Counter": "True",
-  "FFlagDebugDisableTelemetryV2Event": "True",
-  "FFlagDebugDisableTelemetryEphemeralCounter": "True",
-  "FFlagDebugDisableTelemetryEphemeralStat": "True",
-  "FFlagDebugDisableTelemetryEventIngest": "True",
-  "FFlagAdServiceEnabled": "False",
+  // Solo flags confirmados en la allowlist oficial de Roblox (sept 2025)
+  "DFIntCSGLevelOfDetailSwitchingDistance": "250",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL12": "500",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL23": "750",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL34": "1000",
+  "DFFlagTextureQualityOverrideEnabled": "True",
+  "DFIntTextureQualityOverride": "0",
+  "DFIntDebugFRMQualityLevelOverride": "1",
+  "FIntFRMMaxGrassDistance": "0",
+  "FFlagDebugGraphicsPreferVulkan": "True",
+  "DFFlagDebugPauseVoxelizer": "True",
 }
 
 const NAV = [
@@ -99,6 +96,17 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
 
       if (!api) return
 
+      // Cargar configuración persistente guardada
+      const cfg = await electronAPI.loadAppConfig()
+      if (cfg?.config) {
+        if (cfg.config.selectedSky) setSelectedSky(cfg.config.selectedSky as string)
+        if (cfg.config.darkOn) setDarkOn(true)
+        if (cfg.config.potatoTexOn) setPotatoTexOn(true)
+        if (cfg.config.potatoOn) setPotatoOn(true)
+        if (cfg.config.lowLatOn) setLowLatOn(true)
+        if (cfg.config.activeFont) setActiveFont(cfg.config.activeFont as string)
+      }
+
       const fr = await api.getAvailableFonts?.()
       if (fr?.success) {
         setFonts(fr.fonts || [])
@@ -128,7 +136,12 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
     setApplyingSky(true); setSkyApplied(false)
     try {
       const r = await electronAPI.applySky(selectedSky, texturePath)
-      if (r?.success) { setSkyApplied(true); setTimeout(() => setSkyApplied(false), 2500) }
+      if (r?.success) {
+        setSkyApplied(true)
+        setTimeout(() => setSkyApplied(false), 2500)
+        // Persistir selección
+        await electronAPI.saveAppConfig({ selectedSky })
+      }
     } finally { setTimeout(() => setApplyingSky(false), 200) }
   }
 
@@ -170,7 +183,10 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
     setApplyingTex(true)
     try {
       const r = await electronAPI.applyDarkTextures(!darkOn, texturePath)
-      if (r?.success) setDarkOn(!darkOn)
+      if (r?.success) {
+        setDarkOn(!darkOn)
+        await electronAPI.saveAppConfig({ darkOn: !darkOn })
+      }
     } finally { setApplyingTex(false) }
   }
 
@@ -178,7 +194,10 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
     setApplyingTex(true)
     try {
       const r = await api?.applyPotatoTextures?.(texturePath)
-      if (r?.success) setPotatoTexOn(true)
+      if (r?.success) {
+        setPotatoTexOn(true)
+        await electronAPI.saveAppConfig({ potatoTexOn: true })
+      }
     } finally { setApplyingTex(false) }
   }
 

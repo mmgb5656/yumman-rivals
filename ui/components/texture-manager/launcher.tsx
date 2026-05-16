@@ -20,20 +20,17 @@ type LaunchState = "idle" | "launching" | "done" | "error"
 interface FontEntry { name: string; file: string }
 
 const LOW_LATENCY_FLAGS: Record<string, string> = {
-  "FLogNetwork": "7",
-  "DFIntConnectionMTUSize": "1400",
-  "DFIntRakNetResendBufferArrayLength": "128",
-  "DFIntRakNetResendTimeoutMS": "300",
-  "DFIntNetworkPrediction": "1",
-  "DFIntNetworkLatencyTolerance": "1",
-  "FFlagDebugDisableTelemetryPoint": "True",
-  "FFlagDebugDisableTelemetryV2Stat": "True",
-  "FFlagDebugDisableTelemetryV2Counter": "True",
-  "FFlagDebugDisableTelemetryV2Event": "True",
-  "FFlagDebugDisableTelemetryEphemeralCounter": "True",
-  "FFlagDebugDisableTelemetryEphemeralStat": "True",
-  "FFlagDebugDisableTelemetryEventIngest": "True",
-  "FFlagAdServiceEnabled": "False",
+  // Solo flags confirmados en la allowlist oficial de Roblox (sept 2025)
+  "DFIntCSGLevelOfDetailSwitchingDistance": "250",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL12": "500",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL23": "750",
+  "DFIntCSGLevelOfDetailSwitchingDistanceL34": "1000",
+  "DFFlagTextureQualityOverrideEnabled": "True",
+  "DFIntTextureQualityOverride": "0",
+  "DFIntDebugFRMQualityLevelOverride": "1",
+  "FIntFRMMaxGrassDistance": "0",
+  "FFlagDebugGraphicsPreferVulkan": "True",
+  "DFFlagDebugPauseVoxelizer": "True",
 }
 
 const TR = {

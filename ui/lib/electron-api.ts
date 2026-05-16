@@ -170,4 +170,28 @@ export const electronAPI = {
     const api = (window as any).electronAPI;
     return await api.restoreOriginal(texturePath);
   },
+
+  // Lanzar instancia extra de Roblox (sin cerrar el launcher)
+  async launchExtraInstance(executorId: string, customPath?: string) {
+    if (!this.isElectron()) {
+      console.log('Simulando instancia extra');
+      return { success: true, message: 'Instancia extra (modo web)' };
+    }
+    const api = (window as any).electronAPI;
+    return await api.launchExtraInstance(executorId, customPath);
+  },
+
+  // Guardar configuración persistente de la app
+  async saveAppConfig(config: Record<string, unknown>) {
+    if (!this.isElectron()) return { success: true };
+    const api = (window as any).electronAPI;
+    return await api.saveAppConfig(config);
+  },
+
+  // Cargar configuración persistente de la app
+  async loadAppConfig() {
+    if (!this.isElectron()) return { success: true, config: {} };
+    const api = (window as any).electronAPI;
+    return await api.loadAppConfig();
+  },
 };

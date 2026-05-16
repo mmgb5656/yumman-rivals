@@ -89,4 +89,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Abrir enlace externo en el navegador del sistema
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+  // Múltiples instancias de Roblox
+  launchExtraInstance: (executorId, customPath) => ipcRenderer.invoke('launch-extra-instance', executorId, customPath),
+
+  // Persistencia de configuración de la app (ejecutor, skybox, texturas, etc.)
+  saveAppConfig: (config) => ipcRenderer.invoke('save-app-config', config),
+  loadAppConfig: () => ipcRenderer.invoke('load-app-config'),
 });

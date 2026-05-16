@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, Settings, Download, HelpCircle, MessageCircle, Loader2, Check, X } from "lucide-react"
+import { motion } from "framer-motion"
+import { ArrowRight, Settings, Download, HelpCircle, MessageCircle, Loader2, Check, X, Copy } from "lucide-react"
 
 type LaunchState = "idle" | "launching" | "done" | "error"
 
@@ -15,6 +15,8 @@ const AVATAR = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-695CED98FDC232201477E
 export function HomeView({ onSettings }: HomeViewProps) {
   const [launchState, setLaunchState] = useState<LaunchState>("idle")
   const [isInstalling, setIsInstalling] = useState(false)
+  const [extraLaunching, setExtraLaunching] = useState(false)
+  const [extraDone, setExtraDone] = useState(false)
   const api = typeof window !== "undefined" ? (window as any).electronAPI : null
 
   const ext = (url: string) => window.open(url, "_blank", "noopener,noreferrer")
@@ -30,6 +32,20 @@ export function HomeView({ onSettings }: HomeViewProps) {
       setLaunchState("error")
       setTimeout(() => setLaunchState("idle"), 3000)
     }
+  }
+
+  // Lanza una instancia extra SIN cerrar el launcher
+  const handleExtraInstance = async () => {
+    if (extraLaunching) return
+    setExtraLaunching(true)
+    try {
+      const r = await api?.launchExtraInstance?.("roblox")
+      if (r?.success) {
+        setExtraDone(true)
+        setTimeout(() => setExtraDone(false), 2500)
+      }
+    } catch { /* ignorar */ }
+    finally { setExtraLaunching(false) }
   }
 
   const handleInstall = async () => {
@@ -66,6 +82,15 @@ export function HomeView({ onSettings }: HomeViewProps) {
       onClick: handleLaunch,
       disabled: launchState !== "idle",
       accent: launchState === "done" ? "#22c55e" : launchState === "error" ? "#ef4444" : null,
+    },
+    {
+      key: "extra",
+      icon: extraLaunching ? <Loader2 size={18} className="animate-spin" /> : extraDone ? <Check size={18} /> : <Copy size={18} />,
+      label: extraLaunching ? "Abriendo..." : extraDone ? "¡Instancia abierta!" : "Abrir instancia extra",
+      onClick: handleExtraInstance,
+      disabled: extraLaunching,
+      accent: extraDone ? "#22c55e" : null,
+      sub: "Abre Roblox sin cerrar el launcher",
     },
     {
       key: "settings",

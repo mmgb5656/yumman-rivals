@@ -1840,7 +1840,6 @@ ipcMain.handle('apply-converted-sky', async (event, texturePath) => {
 // ─── ABRIR ENLACE EXTERNO ─────────────────────────────────────────────────────
 ipcMain.handle('open-external', async (event, url) => {
   try {
-    // Validar que sea una URL http/https para evitar inyección de protocolos
     if (!url || (!url.startsWith('https://') && !url.startsWith('http://'))) {
       return { success: false, message: 'URL inválida o protocolo no permitido' };
     }
@@ -1848,6 +1847,84 @@ ipcMain.handle('open-external', async (event, url) => {
     return { success: true };
   } catch (error) {
     log.error('Error abriendo enlace externo:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+// ─── PERSISTENCIA DE CONFIGURACIÓN DE LA APP ─────────────────────────────────
+// Guarda el estado completo: ejecutor, skybox activo, texturas, fuente, etc.
+const APP_CONFIG_PATH = path.join(YUMMAN_RIVALS_PATH, 'app-config.json');
+
+ipcMain.handle('save-app-config', async (event, config) => {
+  try {
+    await fs.ensureDir(YUMMAN_RIVALS_PATH);
+    const existing = fs.existsSync(APP_CONFIG_PATH)
+      ? JSON.parse(await fs.readFile(APP_CONFIG_PATH, 'utf8').catch(() => '{}'))
+      : {};
+    const merged = { ...existing, ...config, updatedAt: new Date().toISOString() };
+    await fs.writeFile(APP_CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf8');
+    log.info('Configuración guardada:', Object.keys(config).join(', '));
+    return { success: true };
+  } catch (error) {
+    log.error('Error guardando configuración:', error);
+    return { success: false, message: error.message };
+  }
+});
+
+ipcMain.handle('load-app-config', async () => {
+  try {
+    if (!fs.existsSync(APP_CONFIG_PATH)) {
+      return { success: true, config: {} };
+    }
+    const content = await fs.readFile(APP_CONFIG_PATH, 'utf8');
+    const config = JSON.parse(content);
+    return { success: true, config };
+  } catch (error) {
+    log.warn('Error cargando configuración:', error.message);
+    return { success: true, config: {} };
+  }
+});
+// Lanza una instancia adicional de Roblox SIN cerrar la app ni el launcher
+ipcMain.handle('launch-extra-instance', async (event, executorId, customPath) => {
+  try {
+    const { spawn } = require('child_process');
+    log.info('=== LANZANDO INSTANCIA EXTRA ===', executorId);
+
+    // Determinar la ruta del exe según el ejecutor
+    let exePath = null;
+
+    if (executorId === 'yumman' && fs.existsSync(DEFAULT_PATHS.yumman)) {
+      const versions = fs.readdirSync(DEFAULT_PATHS.yumman)
+        .filter(f => f.startsWith('version-'))
+        .map(f => ({ name: f, path: path.join(DEFAULT_PATHS.yumman, f), mtime: fs.statSync(path.join(DEFAULT_PATHS.yumman, f)).mtime }))
+        .sort((a, b) => b.mtime - a.mtime);
+      if (versions.length > 0) exePath = path.join(versions[0].path, 'RobloxPlayerBeta.exe');
+    }
+
+    if (!exePath && fs.existsSync(DEFAULT_PATHS.roblox)) {
+      const versions = fs.readdirSync(DEFAULT_PATHS.roblox)
+        .filter(f => f.startsWith('version-'))
+        .map(f => ({ name: f, path: path.join(DEFAULT_PATHS.roblox, f), mtime: fs.statSync(path.join(DEFAULT_PATHS.roblox, f)).mtime }))
+        .sort((a, b) => b.mtime - a.mtime);
+      if (versions.length > 0) exePath = path.join(versions[0].path, 'RobloxPlayerBeta.exe');
+    }
+
+    if (!exePath || !fs.existsSync(exePath)) {
+      return { success: false, message: 'No se encontró RobloxPlayerBeta.exe' };
+    }
+
+    // Lanzar instancia extra — detached para que sea independiente
+    // NO llamamos app.quit() para mantener el launcher abierto
+    const proc = spawn(exePath, [], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    proc.unref();
+
+    log.info('Instancia extra lanzada:', exePath, 'PID:', proc.pid);
+    return { success: true, message: 'Instancia extra iniciada', pid: proc.pid };
+  } catch (error) {
+    log.error('Error lanzando instancia extra:', error);
     return { success: false, message: error.message };
   }
 });
