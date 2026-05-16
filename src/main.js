@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
+﻿const { app, BrowserWindow, ipcMain, dialog, shell, protocol } = require('electron');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
@@ -1884,41 +1884,61 @@ ipcMain.handle('load-app-config', async () => {
     return { success: true, config: {} };
   }
 });
-// Lanza una instancia adicional de Roblox SIN cerrar la app ni el launcher
+// Multi-instance: crea ROBLOX_SingletonEvent antes de lanzar Roblox
+// Fuente: github.com/bloxstraplabs/bloxstrap/issues/6054
 ipcMain.handle('launch-extra-instance', async (event, executorId, customPath) => {
   try {
     const { spawn } = require('child_process');
-    log.info('=== LANZANDO INSTANCIA EXTRA ===', executorId);
+    log.info('=== LANZANDO INSTANCIA EXTRA (mutex method) ===');
 
-    // Determinar la ruta del exe según el ejecutor
     let exePath = null;
+    const searchPaths = [
+      DEFAULT_PATHS.yumman,
+      DEFAULT_PATHS.roblox,
+      DEFAULT_PATHS.fishstrap,
+      DEFAULT_PATHS.bloxtrap,
+    ].filter(p => p && fs.existsSync(p));
 
-    if (executorId === 'yumman' && fs.existsSync(DEFAULT_PATHS.yumman)) {
-      const versions = fs.readdirSync(DEFAULT_PATHS.yumman)
-        .filter(f => f.startsWith('version-'))
-        .map(f => ({ name: f, path: path.join(DEFAULT_PATHS.yumman, f), mtime: fs.statSync(path.join(DEFAULT_PATHS.yumman, f)).mtime }))
-        .sort((a, b) => b.mtime - a.mtime);
-      if (versions.length > 0) exePath = path.join(versions[0].path, 'RobloxPlayerBeta.exe');
+    for (const basePath of searchPaths) {
+      try {
+        const versions = fs.readdirSync(basePath)
+          .filter(f => f.startsWith('version-'))
+          .map(f => ({ name: f, path: path.join(basePath, f), mtime: fs.statSync(path.join(basePath, f)).mtime }))
+          .sort((a, b) => b.mtime - a.mtime);
+        if (versions.length > 0) {
+          const candidate = path.join(versions[0].path, 'RobloxPlayerBeta.exe');
+          if (fs.existsSync(candidate)) { exePath = candidate; break; }
+        }
+      } catch (e) { /* skip */ }
     }
 
-    if (!exePath && fs.existsSync(DEFAULT_PATHS.roblox)) {
-      const versions = fs.readdirSync(DEFAULT_PATHS.roblox)
-        .filter(f => f.startsWith('version-'))
-        .map(f => ({ name: f, path: path.join(DEFAULT_PATHS.roblox, f), mtime: fs.statSync(path.join(DEFAULT_PATHS.roblox, f)).mtime }))
-        .sort((a, b) => b.mtime - a.mtime);
-      if (versions.length > 0) exePath = path.join(versions[0].path, 'RobloxPlayerBeta.exe');
+    if (!exePath) {
+      return { success: false, message: 'No se encontro RobloxPlayerBeta.exe' };
     }
 
-    if (!exePath || !fs.existsSync(exePath)) {
-      return { success: false, message: 'No se encontró RobloxPlayerBeta.exe' };
-    }
+    log.info('Exe encontrado:', exePath);
 
-    // Lanzar instancia extra — detached para que sea independiente
-    // NO llamamos app.quit() para mantener el launcher abierto
-    const proc = spawn(exePath, [], {
-      detached: true,
-      stdio: 'ignore',
-    });
+    // Crear ROBLOX_SingletonEvent ANTES de lanzar Roblox
+    // Cuando Roblox intenta crear ese evento y ya existe, no bloquea la segunda instancia
+    const mutexScript = '$e=[System.Threading.EventWaitHandle]::new($false,[System.Threading.EventResetMode]::ManualReset,"ROBLOX_SingletonEvent");Start-Sleep -Seconds 15;$e.Dispose()';
+
+    spawn('powershell.exe', ['-WindowStyle', 'Hidden', '-NonInteractive', '-Command', mutexScript], {
+      detached: true, stdio: 'ignore',
+    }).unref();
+
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    const proc = spawn(exePath, [], { detached: true, stdio: 'ignore' });
+    proc.unref();
+
+    log.info('Instancia extra lanzada, PID:', proc.pid);
+    return { success: true, message: 'Instancia extra iniciada', pid: proc.pid };
+
+  } catch (error) {
+    log.error('Error lanzando instancia extra:', error);
+    return { success: false, message: error.message };
+  }
+});
     proc.unref();
 
     log.info('Instancia extra lanzada:', exePath, 'PID:', proc.pid);
