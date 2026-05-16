@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
   Globe, 
@@ -85,6 +85,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     executor: "roblox",
     customExecutorPath: "",
   })
+  const skyScrollRef = useRef<HTMLDivElement>(null)
   
   const t = translations[settings.language]
 
@@ -99,71 +100,44 @@ export function Onboarding({ onComplete }: OnboardingProps) {
     
     try {
       console.log('=== FINALIZANDO ONBOARDING ===');
-      console.log('Ejecutor seleccionado:', settings.executor);
-      console.log('Texturas oscuras:', settings.darkTextures);
-      console.log('Cielo seleccionado:', settings.selectedSky);
-      console.log('Ruta personalizada:', settings.customExecutorPath);
       
-      // Obtener ruta de texturas según el ejecutor seleccionado
-      console.log('Obteniendo ruta de texturas...');
       const executorResult = await electronAPI.getExecutorTexturePath(
         settings.executor,
         settings.customExecutorPath || undefined
       );
       
-      console.log('Resultado de ejecutor:', JSON.stringify(executorResult, null, 2));
-      
       if (!executorResult.valid) {
         console.error('❌ Error al obtener ruta del ejecutor:', executorResult.message);
         alert(`Error: ${executorResult.message}\n\nLa app continuará pero puede que no funcione correctamente.`);
-        // Continuar de todos modos
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsApplying(false)
         onComplete(settings);
         return;
       }
       
       const texturePath = executorResult.texturePath || '';
-      console.log('✓ Ruta de texturas obtenida:', texturePath);
       
-      // Aplicar texturas oscuras si está habilitado
       if (settings.darkTextures && texturePath) {
-        console.log('Aplicando texturas oscuras...');
         const textureResult = await electronAPI.applyDarkTextures(true, texturePath);
-        console.log('Resultado texturas:', JSON.stringify(textureResult, null, 2));
-        
-        if (textureResult.success) {
-          console.log('✓ Texturas oscuras aplicadas');
-        } else {
+        if (!textureResult.success) {
           console.error('❌ Error al aplicar texturas:', textureResult.message);
         }
       }
       
-      // Aplicar skybox seleccionado
       if (settings.selectedSky && texturePath) {
-        console.log('Aplicando skybox:', settings.selectedSky);
         const skyResult = await electronAPI.applySky(settings.selectedSky, texturePath);
-        console.log('Resultado skybox:', JSON.stringify(skyResult, null, 2));
-        
-        if (skyResult.success) {
-          console.log('✓ Skybox aplicado');
-        } else {
+        if (!skyResult.success) {
           console.error('❌ Error al aplicar skybox:', skyResult.message);
         }
       }
       
-      console.log('=== ONBOARDING COMPLETADO ===');
-      
-      // Esperar un poco para mostrar la animación
       await new Promise(resolve => setTimeout(resolve, 1500))
-      
+      setIsApplying(false)
       onComplete(settings)
     } catch (error) {
       console.error('❌ Error crítico en onboarding:', error)
       alert(`Error crítico: ${error}\n\nRevisa la consola para más detalles.`);
-      // Continuar de todos modos
-      setTimeout(() => {
-        onComplete(settings)
-      }, 1000)
+      setIsApplying(false)
+      setTimeout(() => { onComplete(settings) }, 1000)
     }
   }
 
@@ -338,7 +312,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
             
             {/* Lista Horizontal Deslizable */}
             <div className="relative mb-8">
-              <div className="flex gap-4 overflow-x-auto pb-4 px-12 scrollbar-hide snap-x snap-mandatory">
+              <div ref={skyScrollRef} className="flex gap-4 overflow-x-auto pb-4 px-12 scrollbar-hide snap-x snap-mandatory">
                 {skies.map(sky => (
                   <button
                     key={sky.id}
@@ -374,10 +348,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               
               {/* Flechas de navegación */}
               <button
-                onClick={() => {
-                  const container = document.querySelector('.overflow-x-auto');
-                  if (container) container.scrollBy({ left: -220, behavior: 'smooth' });
-                }}
+                onClick={() => skyScrollRef.current?.scrollBy({ left: -220, behavior: 'smooth' })}
                 className="absolute left-0 top-1/2 -translate-y-1/2 rounded-full bg-muted/80 p-2 backdrop-blur-sm transition-all hover:bg-white hover:text-black"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -385,10 +356,7 @@ export function Onboarding({ onComplete }: OnboardingProps) {
                 </svg>
               </button>
               <button
-                onClick={() => {
-                  const container = document.querySelector('.overflow-x-auto');
-                  if (container) container.scrollBy({ left: 220, behavior: 'smooth' });
-                }}
+                onClick={() => skyScrollRef.current?.scrollBy({ left: 220, behavior: 'smooth' })}
                 className="absolute right-0 top-1/2 -translate-y-1/2 rounded-full bg-muted/80 p-2 backdrop-blur-sm transition-all hover:bg-white hover:text-black"
               >
                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

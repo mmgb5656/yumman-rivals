@@ -187,9 +187,15 @@ export function Launcher() {
   }
 
   const handleInstall = async () => {
+    if (isInstalling) return
     setIsInstalling(true)
-    await api?.installRoblox?.()
-    setTimeout(() => setIsInstalling(false), 4000)
+    try {
+      await api?.installRoblox?.()
+    } catch {
+      // ignorar — el instalador se lanza en background
+    } finally {
+      setTimeout(() => setIsInstalling(false), 4000)
+    }
   }
 
   // Sky

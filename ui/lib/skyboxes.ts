@@ -28,9 +28,6 @@ export const skyboxes = [
 ];
 
 // Skyboxes destacados para el onboarding (los 4 más populares)
-export const featuredSkyboxes = [
-  skyboxes.find(s => s.id === "night")!,
-  skyboxes.find(s => s.id === "aurora")!,
-  skyboxes.find(s => s.id === "space-blue")!,
-  skyboxes.find(s => s.id === "pink-sunrise")!,
-];
+export const featuredSkyboxes = (["night", "aurora", "space-blue", "pink-sunrise"] as const)
+  .map(id => skyboxes.find(s => s.id === id))
+  .filter((s): s is typeof skyboxes[number] => s !== undefined);

@@ -1,6 +1,6 @@
 {
   "skyboxes": {
-    "root": "resources/skyboxes/all-skyboxes/ALL SKYBOXES/ALL SKYBOXES",
+    "root": "resources/skyboxes/all-skyboxes/ALL SKYBOXES",
     "previews": "resources/ui-images",
     "list": [
       "Night",

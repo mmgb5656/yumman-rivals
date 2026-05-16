@@ -61,10 +61,13 @@ class ResourceDownloader {
             redirectCount++;
             if (redirectCount > maxRedirects) {
               file.close();
-              fs.unlinkSync(this.tempPath);
+              try { fs.unlinkSync(this.tempPath); } catch (e) { /* ignorar */ }
               reject(new Error('Demasiadas redirecciones'));
               return;
             }
+            
+            // Consumir el body de la respuesta de redirección para liberar el socket
+            response.resume();
             
             log.info(`Redirigiendo a: ${response.headers.location}`);
             onStatus(`Redirigiendo... (${redirectCount}/${maxRedirects})`);
@@ -73,17 +76,13 @@ class ResourceDownloader {
             this.handleDownload(response, file, onProgress, onStatus, resolve, reject);
           } else {
             file.close();
-            fs.unlinkSync(this.tempPath);
+            try { fs.unlinkSync(this.tempPath); } catch (e) { /* ignorar */ }
             reject(new Error(`Error HTTP ${response.statusCode}: ${response.statusMessage}`));
           }
         }).on('error', (error) => {
           log.error('Error en petición HTTP:', error);
           file.close();
-          try {
-            fs.unlinkSync(this.tempPath);
-          } catch (e) {
-            // Ignorar error de limpieza
-          }
+          try { fs.unlinkSync(this.tempPath); } catch (e) { /* ignorar */ }
           reject(error);
         });
       };

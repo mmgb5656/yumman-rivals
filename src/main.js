@@ -283,8 +283,11 @@ async function checkAndDownloadResources() {
     
     log.info('Recursos no encontrados, iniciando descarga desde GitHub...');
     
+    // Declarar dlWindow FUERA del try para que sea accesible en el catch externo
+    let dlWindow = null;
+    
     // Crear ventana de descarga
-    const dlWindow = createDownloadWindow();
+    dlWindow = createDownloadWindow();
     
     // Timeout de 30 segundos para la conexión inicial
     const downloadTimeout = setTimeout(() => {
@@ -344,9 +347,9 @@ async function checkAndDownloadResources() {
   } catch (error) {
     log.error('Error descargando recursos:', error);
     
-    // Cerrar ventana de descarga si existe (puede no estar definida si falló antes de crearla)
+    // Cerrar ventana de descarga si existe
     try {
-      if (typeof dlWindow !== 'undefined' && dlWindow && !dlWindow.isDestroyed()) {
+      if (dlWindow && !dlWindow.isDestroyed()) {
         dlWindow.close();
       }
     } catch (e) { /* ignorar */ }
@@ -597,13 +600,13 @@ ipcMain.handle('restore-original', async (event, texturePath) => {
 // Aplicar preset personalizado
 ipcMain.handle('apply-custom-preset', async (event, presetName, texturePath) => {
   try {
-    const presetPath = path.join(__dirname, presetName, presetName);
+    // Buscar el preset en RESOURCES_PATH/presets/<nombre>/
+    const presetPath = path.join(RESOURCES_PATH, 'presets', presetName);
     
     if (!fs.existsSync(presetPath)) {
-      return { success: false, message: 'Preset no encontrado' };
+      return { success: false, message: `Preset "${presetName}" no encontrado en ${presetPath}` };
     }
     
-    // Copiar todas las carpetas del preset
     const folders = fs.readdirSync(presetPath);
     
     for (const folder of folders) {
@@ -624,16 +627,14 @@ ipcMain.handle('apply-custom-preset', async (event, presetName, texturePath) => 
 // Obtener lista de presets disponibles
 ipcMain.handle('get-available-presets', async () => {
   try {
-    const presets = [];
-    const items = fs.readdirSync(__dirname);
-    
-    for (const item of items) {
-      const itemPath = path.join(__dirname, item);
-      if (fs.statSync(itemPath).isDirectory() && 
-          fs.existsSync(path.join(itemPath, item))) {
-        presets.push(item);
-      }
+    const presetsDir = path.join(RESOURCES_PATH, 'presets');
+    if (!fs.existsSync(presetsDir)) {
+      return { success: true, presets: [] };
     }
+    
+    const presets = fs.readdirSync(presetsDir).filter(item => {
+      return fs.statSync(path.join(presetsDir, item)).isDirectory();
+    });
     
     return { success: true, presets };
   } catch (error) {
