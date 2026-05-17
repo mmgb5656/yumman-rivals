@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
@@ -242,6 +242,7 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
       if (fr?.success) { await api?.saveFlags?.(fr.flags); setFlags(fr.flags) }
       await api?.applyPotatoTextures?.(texturePath)
       setPotatoOn(true)
+      await electronAPI.saveAppConfig({ potatoOn: true, potatoTexOn: true })
     } finally { setApplyingPotato(false) }
   }
 
@@ -252,6 +253,7 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
       : Object.fromEntries(Object.entries(flags).filter(([k]) => !LOW_LATENCY_FLAGS[k]))
     setFlags(newFlags); setLowLatOn(next)
     await api?.saveFlags?.(newFlags)
+    await electronAPI.saveAppConfig({ lowLatOn: next })
   }
 
   const addFlag = () => {
@@ -290,7 +292,10 @@ export function SettingsView({ onBack }: SettingsViewProps = {}) {
     finally { setSavingFlags(false) }
   }
 
-  const clearFlags = async () => { await api?.clearFlags?.(); setFlags({}); setPotatoOn(false); setLowLatOn(false) }
+  const clearFlags = async () => {
+    await api?.clearFlags?.(); setFlags({}); setPotatoOn(false); setLowLatOn(false)
+    await electronAPI.saveAppConfig({ potatoOn: false, potatoTexOn: false, lowLatOn: false })
+  }
 
   const filteredFonts = fonts.filter(f => f.name.toLowerCase().includes(fontSearch.toLowerCase()))
   const filteredFlags = Object.entries(flags).filter(([k]) => k.toLowerCase().includes(flagSearch.toLowerCase()))
