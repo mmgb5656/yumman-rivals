@@ -1,23 +1,52 @@
 "use client"
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { ArrowRight, Settings, Download, HelpCircle, MessageCircle, Loader2, Check, X, Copy } from "lucide-react"
+import { useState, useEffect } from "react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Settings, Loader2, Check, X, ChevronRight, ArrowRight } from "lucide-react"
 
 type LaunchState = "idle" | "launching" | "done" | "error"
+interface HomeViewProps { onSettings: () => void }
 
-interface HomeViewProps {
-  onSettings: () => void
-}
+const AVATAR       = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-695CED98FDC232201477E9A144B99CE4-Png/150/150/AvatarHeadshot/Webp/noFilter"
+const ROBLOX_ICON  = "https://static.wikia.nocookie.net/logopedia/images/d/da/Roblox_2018_O_Icon_final_-_Gray.svg/revision/latest/scale-to-width-down/250?cb=20190809191156"
+const DISCORD_ICON = "https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/discord-white-icon.png"
 
-const AVATAR = "https://tr.rbxcdn.com/30DAY-AvatarHeadshot-695CED98FDC232201477E9A144B99CE4-Png/150/150/AvatarHeadshot/Webp/noFilter"
+const TIPS = [
+  "Si usas escopeta doble eres una rata",
+  "El que hace camping no tiene skill",
+  "YUMMAN estuvo aquí",
+  "El que spamea tiene 0 aim",
+  "Si pierdes la culpa es del lag, siempre",
+  "Rivals es el mejor juego de Roblox, punto",
+  "No hay excusas, solo malos jugadores",
+  "Si te matan con pistola, gg",
+  "Activa Potato Mode y vuela",
+  "Dark textures = mejor visibilidad en combate",
+  "YUMMAN RIVALS — el launcher que necesitabas",
+  "El que hace team kill es lo peor",
+  "Si no tienes 60 FPS no eres real",
+]
 
 export function HomeView({ onSettings }: HomeViewProps) {
   const [launchState, setLaunchState] = useState<LaunchState>("idle")
-  const [isInstalling, setIsInstalling] = useState(false)
-  const [extraLaunching, setExtraLaunching] = useState(false)
-  const [extraDone, setExtraDone] = useState(false)
+  const [tipIdx, setTipIdx]           = useState(() => Math.floor(Math.random() * TIPS.length))
+  const [tipVis, setTipVis]           = useState(true)
+  const [version, setVersion]         = useState("1.0.1")
   const api = typeof window !== "undefined" ? (window as any).electronAPI : null
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setTipVis(false)
+      setTimeout(() => { setTipIdx(i => (i + 1) % TIPS.length); setTipVis(true) }, 300)
+    }, 5000)
+    return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    if (!api) return
+    api.getAppVersion?.().then((v: string) => { if (v) setVersion(v) })
+    setTimeout(() => api.checkForUpdates?.(), 3000)
+  }, [])
 
   const ext = (url: string) => window.open(url, "_blank", "noopener,noreferrer")
 
@@ -34,212 +63,221 @@ export function HomeView({ onSettings }: HomeViewProps) {
     }
   }
 
-  // Lanza una instancia extra SIN cerrar el launcher
-  const handleExtraInstance = async () => {
-    if (extraLaunching) return
-    setExtraLaunching(true)
-    try {
-      const r = await api?.launchExtraInstance?.("roblox")
-      if (r?.success) {
-        setExtraDone(true)
-        setTimeout(() => setExtraDone(false), 2500)
-      }
-    } catch { /* ignorar */ }
-    finally { setExtraLaunching(false) }
-  }
+  const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif"
 
-  const handleInstall = async () => {
-    if (isInstalling) return
-    setIsInstalling(true)
-    try {
-      await api?.installRoblox?.()
-    } catch {
-      // ignorar — el instalador se lanza en background
-    } finally {
-      setTimeout(() => setIsInstalling(false), 4000)
-    }
-  }
-
-  const launchIcon = () => {
-    if (launchState === "launching") return <Loader2 size={18} className="animate-spin" />
-    if (launchState === "done") return <Check size={18} />
-    if (launchState === "error") return <X size={18} />
-    return <ArrowRight size={18} />
-  }
-
-  const launchText = () => {
-    if (launchState === "launching") return "Iniciando Roblox..."
-    if (launchState === "done") return "¡Roblox iniciado!"
-    if (launchState === "error") return "Error al iniciar"
-    return "Iniciar Roblox"
-  }
-
-  const buttons = [
-    {
-      key: "launch",
-      icon: launchIcon(),
-      label: launchText(),
-      onClick: handleLaunch,
-      disabled: launchState !== "idle",
-      accent: launchState === "done" ? "#22c55e" : launchState === "error" ? "#ef4444" : null,
-    },
-    {
-      key: "extra",
-      icon: extraLaunching ? <Loader2 size={18} className="animate-spin" /> : extraDone ? <Check size={18} /> : <Copy size={18} />,
-      label: extraLaunching ? "Abriendo..." : extraDone ? "¡Instancia abierta!" : "Abrir instancia extra",
-      onClick: handleExtraInstance,
-      disabled: extraLaunching,
-      accent: extraDone ? "#22c55e" : null,
-      sub: "Abre Roblox sin cerrar el launcher",
-    },
-    {
-      key: "settings",
-      icon: <Settings size={18} />,
-      label: "Configurar ajustes",
-      onClick: onSettings,
-      disabled: false,
-      accent: null,
-    },
-    {
-      key: "install",
-      icon: isInstalling ? <Loader2 size={18} className="animate-spin" /> : <Download size={18} />,
-      label: isInstalling ? "Instalando..." : "Instalar / Actualizar Roblox",
-      onClick: handleInstall,
-      disabled: isInstalling,
-      accent: null,
-    },
-  ]
+  // Botón estilo Fishstrap
+  const NavBtn = ({
+    icon, label, onClick, accent, delay
+  }: {
+    icon: React.ReactNode
+    label: string
+    onClick: () => void
+    accent?: boolean
+    delay: number
+  }) => (
+    <motion.button
+      initial={{ opacity: 0, x: 12 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay, duration: 0.32 }}
+      whileHover={{ x: 2 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      style={{
+        display: "flex", alignItems: "center",
+        width: "100%", padding: "14px 18px",
+        borderRadius: 10, cursor: "pointer",
+        border: "1px solid rgba(255,255,255,0.07)",
+        background: "rgba(255,255,255,0.03)",
+        transition: "all 0.15s", gap: 14,
+      }}
+      onMouseEnter={e => {
+        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"
+        ;(e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)"
+      }}
+      onMouseLeave={e => {
+        (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"
+        ;(e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)"
+      }}
+    >
+      {/* Icono izquierda */}
+      <div style={{ color: "#888580", flexShrink: 0, width: 20, display: "flex", justifyContent: "center" }}>
+        {icon}
+      </div>
+      {/* Label */}
+      <span style={{
+        flex: 1, textAlign: "left",
+        color: "#C8C8C8", fontSize: 14, fontWeight: 500,
+        letterSpacing: "-0.01em",
+      }}>
+        {label}
+      </span>
+      {/* Chevron derecha */}
+      <ChevronRight size={16} style={{ color: "#444240", flexShrink: 0 }} />
+    </motion.button>
+  )
 
   return (
     <div style={{
-      display: "flex", height: "100vh", width: "100vw", overflow: "hidden",
-      userSelect: "none", backgroundColor: "#1D1B17",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif",
+      display: "flex", flexDirection: "column",
+      height: "100vh", width: "100vw", overflow: "hidden",
+      userSelect: "none", backgroundColor: "#1C1A18", fontFamily: font,
     }}>
-      {/* Left panel */}
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.4, ease: "easeOut" }}
-        style={{
-          width: 210, display: "flex", flexDirection: "column",
-          justifyContent: "space-between", padding: "28px 22px",
-          borderRight: "1px solid rgba(255,255,255,0.06)", flexShrink: 0,
-        }}
-      >
-        {/* Top */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.1, duration: 0.4, ease: "easeOut" }}
-            style={{
-              width: 68, height: 68, borderRadius: 18,
-              overflow: "hidden", border: "1px solid rgba(255,255,255,0.08)",
-              boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-            }}
-          >
-            <img src={AVATAR} alt="YUMMAN" style={{ width: "100%", height: "100%", objectFit: "cover" }} crossOrigin="anonymous" />
-          </motion.div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.35 }}
-          >
-            <p style={{ color: "#AEAEAE", fontSize: 14, fontWeight: 600, margin: 0, letterSpacing: "-0.01em" }}>YUMMAN RIVALS</p>
-            <p style={{ color: "#555250", fontSize: 11, margin: "3px 0 0 0" }}>Versión 1.0.1</p>
-          </motion.div>
-        </div>
+      {/* ── CUERPO ─────────────────────────────────────────────────────── */}
+      <div style={{ display: "flex", flex: 1, overflow: "hidden" }}>
 
-        {/* Bottom links */}
+        {/* ── IZQUIERDA ─────────────────────────────────────────────── */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.3 }}
-          style={{ display: "flex", flexDirection: "column", gap: 10 }}
+          initial={{ opacity: 0, x: -16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.38 }}
+          style={{
+            width: 220, display: "flex", flexDirection: "column",
+            padding: "32px 24px",
+            flexShrink: 0, justifyContent: "center",
+          }}
         >
-          {[
-            { label: "Acerca de YUMMAN", icon: <HelpCircle size={13} />, url: "https://www.roblox.com/es/users/4018950771/profile" },
-            { label: "Unirse al Discord", icon: <MessageCircle size={13} />, url: "https://discord.com/invite/EVWqd5swAt" },
-          ].map(item => (
-            <motion.button
-              key={item.label}
-              whileHover={{ x: 3 }}
-              onClick={() => ext(item.url)}
-              style={{
-                display: "flex", alignItems: "center", gap: 7,
-                color: "#555250", fontSize: 11, background: "none",
-                border: "none", cursor: "pointer", padding: 0, textAlign: "left",
-                transition: "color 0.15s",
-              }}
-              onMouseEnter={e => (e.currentTarget.style.color = "#AEAEAE")}
-              onMouseLeave={e => (e.currentTarget.style.color = "#555250")}
-            >
-              {item.icon}{item.label}
-            </motion.button>
-          ))}
-        </motion.div>
-      </motion.div>
-
-      {/* Right panel */}
-      <div style={{
-        flex: 1, display: "flex", flexDirection: "column",
-        justifyContent: "center", gap: 10, padding: "28px 22px",
-      }}>
-        {buttons.map((btn, i) => (
-          <motion.button
-            key={btn.key}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 + i * 0.08, duration: 0.35, ease: "easeOut" }}
-            whileHover={!btn.disabled ? { scale: 1.015, x: 2 } : {}}
-            whileTap={!btn.disabled ? { scale: 0.985 } : {}}
-            onClick={btn.onClick}
-            disabled={btn.disabled}
-            style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
-              borderRadius: 14, padding: "15px 18px", cursor: btn.disabled ? "not-allowed" : "pointer",
-              opacity: btn.disabled && btn.key !== "launch" ? 0.5 : 1,
-              border: `1px solid ${btn.accent ? btn.accent + "40" : "rgba(255,255,255,0.07)"}`,
-              background: btn.accent ? `${btn.accent}12` : "rgba(255,255,255,0.04)",
-              backdropFilter: "blur(8px)",
-              transition: "border-color 0.2s, background 0.2s",
-              width: "100%",
-            }}
-            onMouseEnter={e => {
-              if (!btn.disabled) {
-                (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.15)"
-                ;(e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.07)"
-              }
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = btn.accent ? btn.accent + "40" : "rgba(255,255,255,0.07)"
-              ;(e.currentTarget as HTMLElement).style.background = btn.accent ? `${btn.accent}12` : "rgba(255,255,255,0.04)"
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-              <div style={{
-                width: 38, height: 38, borderRadius: 12,
-                background: "rgba(255,255,255,0.06)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: btn.accent || "#AEAEAE", flexShrink: 0,
-              }}>
-                {btn.icon}
-              </div>
-              <span style={{ color: "#AEAEAE", fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em" }}>
-                {btn.label}
-              </span>
-            </div>
+          {/* Logo + nombre + versión */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28 }}>
             <motion.div
-              animate={{ x: [0, 3, 0] }}
-              transition={{ repeat: btn.key === "launch" && launchState === "idle" ? Infinity : 0, duration: 2, ease: "easeInOut" }}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.08, duration: 0.4 }}
+              style={{
+                width: 48, height: 48, borderRadius: 12,
+                overflow: "hidden", flexShrink: 0,
+                border: "1px solid rgba(255,255,255,0.08)",
+                boxShadow: "0 4px 16px rgba(0,0,0,0.5)",
+              }}
             >
-              <ArrowRight size={15} style={{ color: "#444240" }} />
+              <img src={AVATAR} alt="YUMMAN"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                crossOrigin="anonymous" />
             </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.14, duration: 0.3 }}
+            >
+              <p style={{ color: "#D8D8D8", fontSize: 14, fontWeight: 700, margin: 0, letterSpacing: "-0.02em", whiteSpace: "nowrap" }}>
+                YUMMAN RIVALS
+              </p>
+              <p style={{ color: "#555250", fontSize: 11, margin: "2px 0 0 0" }}>
+                Versión {version}
+              </p>
+            </motion.div>
+          </div>
+
+          {/* Spacer */}
+          <div style={{ height: 20 }} />
+
+          {/* Links */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3, duration: 0.3 }}
+            style={{ display: "flex", flexDirection: "column", gap: 12 }}
+          >
+            {[
+              { label: "Acerca de YUMMAN", url: "https://www.roblox.com/es/users/4018950771/profile", icon: (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              )},
+              { label: "Unirse al Discord", url: "https://discord.com/invite/EVWqd5swAt", icon: (
+                <img src={DISCORD_ICON} alt="Discord"
+                  style={{ width: 14, height: 14, objectFit: "contain", opacity: 0.5 }}
+                  crossOrigin="anonymous" />
+              )},
+            ].map(item => (
+              <motion.button key={item.label} whileHover={{ x: 3 }}
+                onClick={() => ext(item.url)}
+                style={{ display: "flex", alignItems: "center", gap: 9, color: "#444240",
+                  fontSize: 12, background: "none", border: "none", cursor: "pointer",
+                  padding: 0, fontWeight: 500, transition: "color 0.15s" }}
+                onMouseEnter={e => (e.currentTarget.style.color = "#888580")}
+                onMouseLeave={e => (e.currentTarget.style.color = "#444240")}
+              >
+                <span style={{ color: "inherit", display: "flex" }}>{item.icon}</span>
+                {item.label}
+              </motion.button>
+            ))}
+          </motion.div>
+        </motion.div>
+
+        {/* ── DERECHA ───────────────────────────────────────────────── */}
+        <div style={{
+          flex: 1, display: "flex", flexDirection: "column",
+          justifyContent: "center", padding: "0 28px 0 12px", gap: 8,
+        }}>
+
+          {/* Iniciar Roblox */}
+          <motion.button
+            initial={{ opacity: 0, x: 12 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.1, duration: 0.32 }}
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleLaunch}
+            disabled={launchState !== "idle"}
+            style={{
+              display: "flex", alignItems: "center",
+              width: "100%", padding: "14px 18px",
+              borderRadius: 10, cursor: launchState !== "idle" ? "not-allowed" : "pointer",
+              border: `1px solid ${launchState === "done" ? "rgba(34,197,94,0.2)" : launchState === "error" ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.07)"}`,
+              background: launchState === "done" ? "rgba(34,197,94,0.05)" : launchState === "error" ? "rgba(239,68,68,0.05)" : "rgba(255,255,255,0.03)",
+              transition: "all 0.15s", gap: 14,
+            }}
+            onMouseEnter={e => { if (launchState === "idle") { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.06)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.12)" } }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = "rgba(255,255,255,0.03)"; (e.currentTarget as HTMLElement).style.borderColor = "rgba(255,255,255,0.07)" }}
+          >
+            <div style={{ color: "#888580", flexShrink: 0, width: 20, display: "flex", justifyContent: "center" }}>
+              {launchState === "launching" ? <Loader2 size={18} className="animate-spin" />
+               : launchState === "done" ? <Check size={18} style={{ color: "#22c55e" }} />
+               : launchState === "error" ? <X size={18} style={{ color: "#ef4444" }} />
+               : <ArrowRight size={18} />}
+            </div>
+            <span style={{ flex: 1, textAlign: "left", color: "#C8C8C8", fontSize: 14, fontWeight: 500, letterSpacing: "-0.01em" }}>
+              {launchState === "launching" ? "Iniciando Roblox..." : launchState === "done" ? "¡Roblox iniciado!" : launchState === "error" ? "Error al iniciar" : "Iniciar Roblox"}
+            </span>
+            <ChevronRight size={16} style={{ color: "#444240", flexShrink: 0 }} />
           </motion.button>
-        ))}
+
+          {/* Configurar ajustes */}
+          <NavBtn
+            icon={<Settings size={18} />}
+            label="Configurar ajustes"
+            onClick={onSettings}
+            delay={0.16}
+          />
+
+        </div>
       </div>
+
+      {/* ── TIP ─────────────────────────────────────────────────────────── */}
+      <div style={{
+        borderTop: "1px solid rgba(255,255,255,0.04)",
+        padding: "8px 24px",
+        display: "flex", alignItems: "center", gap: 10,
+        background: "rgba(0,0,0,0.1)", flexShrink: 0,
+      }}>
+        <span style={{ color: "#252320", fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", flexShrink: 0 }}>
+          YUMMAN TIP
+        </span>
+        <div style={{ width: 1, height: 8, background: "rgba(255,255,255,0.04)", flexShrink: 0 }} />
+        <AnimatePresence mode="wait">
+          {tipVis && (
+            <motion.p key={tipIdx}
+              initial={{ opacity: 0, x: 6 }} animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -6 }} transition={{ duration: 0.25 }}
+              style={{ color: "#333230", fontSize: 11, margin: 0, flex: 1 }}
+            >
+              {TIPS[tipIdx]}
+            </motion.p>
+          )}
+        </AnimatePresence>
+      </div>
+
     </div>
   )
 }

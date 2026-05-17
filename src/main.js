@@ -79,10 +79,10 @@ const DEFAULT_PATHS = {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 620,
-    height: 400,
-    minWidth: 620,
-    minHeight: 400,
+    width: 580,
+    height: 280,
+    minWidth: 580,
+    minHeight: 280,
     resizable: false,
     webPreferences: {
       nodeIntegration: false,
@@ -1186,8 +1186,8 @@ ipcMain.handle('resize-window', (event, mode) => {
     if (mainWindow.isMaximized()) mainWindow.unmaximize();
     mainWindow.setMaximizable(false);
     mainWindow.setResizable(false);
-    mainWindow.setMinimumSize(620, 400);
-    mainWindow.setSize(620, 400, true);
+    mainWindow.setMinimumSize(580, 280);
+    mainWindow.setSize(580, 280, true);
     mainWindow.center();
   }
 });
@@ -1444,7 +1444,6 @@ ipcMain.handle('install-roblox', async () => {
       stdio: 'ignore',
       windowsHide: false // El instalador de Roblox necesita mostrarse para autenticarse
     });
-    proc.unref();
     
     return { success: true, message: 'Instalador de Roblox iniciado' };
   } catch (error) {
@@ -1929,7 +1928,6 @@ ipcMain.handle('launch-extra-instance', async (event, executorId, customPath) =>
     await new Promise(resolve => setTimeout(resolve, 400));
 
     const proc = spawn(exePath, [], { detached: true, stdio: 'ignore' });
-    proc.unref();
 
     log.info('Instancia extra lanzada, PID:', proc.pid);
     return { success: true, message: 'Instancia extra iniciada', pid: proc.pid };
@@ -1939,13 +1937,6 @@ ipcMain.handle('launch-extra-instance', async (event, executorId, customPath) =>
     return { success: false, message: error.message };
   }
 });
-    proc.unref();
 
-    log.info('Instancia extra lanzada:', exePath, 'PID:', proc.pid);
-    return { success: true, message: 'Instancia extra iniciada', pid: proc.pid };
-  } catch (error) {
-    log.error('Error lanzando instancia extra:', error);
-    return { success: false, message: error.message };
-  }
-});
+
 
