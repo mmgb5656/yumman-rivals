@@ -289,13 +289,13 @@ async function checkAndDownloadResources() {
     // Crear ventana de descarga
     dlWindow = createDownloadWindow();
     
-    // Timeout de 30 segundos para la conexión inicial
+    // Timeout de 5 minutos para la descarga (el ZIP es ~272 MB)
     const downloadTimeout = setTimeout(() => {
       log.error('Timeout: La descarga tardó demasiado');
       if (dlWindow && !dlWindow.isDestroyed()) {
         dlWindow.close();
       }
-    }, 30000);
+    }, 300000);
     
     try {
       // Descargar recursos
@@ -1597,6 +1597,16 @@ ipcMain.handle('apply-potato-textures', async (event, texturePath) => {
     }
     
     log.info(`Texturas potato aplicadas: ${copied}/${files.length}`);
+
+    // Persistir potato mode en app-config
+    try {
+      const existing = fs.existsSync(APP_CONFIG_PATH)
+        ? JSON.parse(await fs.readFile(APP_CONFIG_PATH, 'utf8').catch(() => '{}'))
+        : {};
+      await fs.ensureDir(YUMMAN_RIVALS_PATH);
+      await fs.writeFile(APP_CONFIG_PATH, JSON.stringify({ ...existing, potatoTexOn: true }, null, 2), 'utf8');
+    } catch (e) { log.warn('No se pudo persistir potato:', e.message); }
+
     return { success: true, message: `Texturas potato aplicadas (${copied} archivos)` };
   } catch (error) {
     log.error('Error apply-potato-textures:', error);
@@ -1693,6 +1703,16 @@ ipcMain.handle('apply-font-pack', async (event, fontFile) => {
     }
     
     log.info('Fuente aplicada:', fontFile, '- archivos:', copied);
+
+    // Persistir fuente activa en app-config
+    try {
+      const existing = fs.existsSync(APP_CONFIG_PATH)
+        ? JSON.parse(await fs.readFile(APP_CONFIG_PATH, 'utf8').catch(() => '{}'))
+        : {};
+      await fs.ensureDir(YUMMAN_RIVALS_PATH);
+      await fs.writeFile(APP_CONFIG_PATH, JSON.stringify({ ...existing, activeFont: fontFile }, null, 2), 'utf8');
+    } catch (e) { log.warn('No se pudo persistir fuente:', e.message); }
+
     return { success: true, message: `Fuente "${fontFile}" aplicada (${copied} archivos)` };
   } catch (error) {
     log.error('Error apply-font-pack:', error);
